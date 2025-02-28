@@ -4,7 +4,7 @@ import Editor from './components/editor';
 
 function App() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen w-screen overflow-hidden ">
       <Editor />
     </div>
   );

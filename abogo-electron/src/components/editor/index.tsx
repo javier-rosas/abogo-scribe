@@ -166,8 +166,8 @@ export default function NotionEditor() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-full w-full flex flex-col p-14">
+      <div className="flex items-center justify-between p-4 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon">
             <Bold className="h-4 w-4" />
@@ -195,56 +195,60 @@ export default function NotionEditor() {
         </div>
       </div>
 
-      <div className="border rounded-lg p-6 min-h-[70vh] bg-background shadow-sm">
-        <div className="space-y-2">
-          {blocks.map((block, index) => (
-            <div key={block.id} className="group relative">
-              <div className="absolute left-0 -ml-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => addBlock("paragraph")}>
-                      <Type className="mr-2 h-4 w-4" />
-                      <span>Text</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addBlock("heading-1")}>
-                      <Heading1 className="mr-2 h-4 w-4" />
-                      <span>Heading 1</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addBlock("heading-2")}>
-                      <Heading2 className="mr-2 h-4 w-4" />
-                      <span>Heading 2</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addBlock("bullet-list")}>
-                      <List className="mr-2 h-4 w-4" />
-                      <span>Bullet List</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addBlock("numbered-list")}>
-                      <ListOrdered className="mr-2 h-4 w-4" />
-                      <span>Numbered List</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addBlock("todo")}>
-                      <CheckSquare className="mr-2 h-4 w-4" />
-                      <span>To-do</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addBlock("code")}>
-                      <Code className="mr-2 h-4 w-4" />
-                      <span>Code</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => addBlock("image")}>
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      <span>Image</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+      <div className="flex-1 overflow-y-auto min-h-0 p-6 bg-background">
+        <div className="max-w-4xl mx-auto">
+          <div className="space-y-2">
+            {blocks.map((block, index) => (
+              <div key={block.id} className="group relative">
+                <div className="absolute left-0 -ml-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => addBlock("paragraph")}>
+                        <Type className="mr-2 h-4 w-4" />
+                        <span>Text</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addBlock("heading-1")}>
+                        <Heading1 className="mr-2 h-4 w-4" />
+                        <span>Heading 1</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addBlock("heading-2")}>
+                        <Heading2 className="mr-2 h-4 w-4" />
+                        <span>Heading 2</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addBlock("bullet-list")}>
+                        <List className="mr-2 h-4 w-4" />
+                        <span>Bullet List</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => addBlock("numbered-list")}
+                      >
+                        <ListOrdered className="mr-2 h-4 w-4" />
+                        <span>Numbered List</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addBlock("todo")}>
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        <span>To-do</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addBlock("code")}>
+                        <Code className="mr-2 h-4 w-4" />
+                        <span>Code</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => addBlock("image")}>
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        <span>Image</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                {renderBlock(block, index)}
               </div>
-              {renderBlock(block, index)}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
