@@ -24,6 +24,33 @@ export default function NotionEditor() {
     }
   }, [activeBlock]);
 
+  const getCaretPosition = (element: HTMLElement): number => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (element.contains(range.startContainer)) {
+        return range.startOffset;
+      }
+    }
+    return 0;
+  };
+
+  const setCaretPosition = (element: HTMLElement, position: number) => {
+    const range = document.createRange();
+    const sel = window.getSelection();
+
+    let node = element.firstChild || element;
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      range.setStart(node, 0);
+    } else {
+      range.setStart(node, Math.min(position, node.textContent?.length || 0));
+    }
+
+    range.collapse(true);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  };
+
   const handleContentChange = (id: string, content: string) => {
     setBlocks(
       blocks.map((block) => (block.id === id ? { ...block, content } : block))
@@ -35,28 +62,50 @@ export default function NotionEditor() {
     _id: string,
     index: number
   ) => {
-    // Get the current content from the editable element
     const currentContent = e.currentTarget.textContent || "";
+    const caretPos = getCaretPosition(e.currentTarget);
+
+    if (e.key === "Backspace" && caretPos === 0 && index > 0) {
+      e.preventDefault();
+
+      const previousBlock = blocks[index - 1];
+      const currentBlock = blocks[index];
+      const previousContent = previousBlock.content;
+
+      const newBlocks = blocks.filter((_, i) => i !== index);
+      newBlocks[index - 1] = {
+        ...previousBlock,
+        content: previousContent + currentContent,
+      };
+
+      setBlocks(newBlocks);
+      setActiveBlock(previousBlock.id);
+
+      setTimeout(() => {
+        const prevBlockElement = blockRefs.current[previousBlock.id];
+        if (prevBlockElement) {
+          prevBlockElement.focus();
+          setCaretPosition(prevBlockElement, previousContent.length);
+        }
+      }, 0);
+
+      return;
+    }
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
 
-      // Get the caret position using the Selection API
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         const caretOffset = range.startOffset;
 
-        // Split the current content into two parts:
-        // leftText stays in the current block, rightText goes to the new block.
         const leftText = currentContent.slice(0, caretOffset);
         const rightText = currentContent.slice(caretOffset);
 
-        // Update the current block with the left text.
         const newBlocks = [...blocks];
         newBlocks[index] = { ...blocks[index], content: leftText };
 
-        // Create a new block for the right text.
         const newBlockId = `block-${Date.now()}`;
         newBlocks.splice(index + 1, 0, {
           id: newBlockId,
@@ -66,12 +115,10 @@ export default function NotionEditor() {
         setBlocks(newBlocks);
         setActiveBlock(newBlockId);
 
-        // After render, move the caret to the new block.
         setTimeout(() => {
           const newBlock = blockRefs.current[newBlockId];
           if (newBlock) {
             newBlock.focus();
-            // Optionally, place the caret at the beginning of the new block.
             const newRange = document.createRange();
             newRange.selectNodeContents(newBlock);
             newRange.collapse(true);
@@ -85,7 +132,7 @@ export default function NotionEditor() {
       }
     } else if (
       e.key === "Backspace" &&
-      currentContent === "" && // Use the actual content rather than the state value
+      currentContent === "" &&
       blocks.length > 1
     ) {
       e.preventDefault();
