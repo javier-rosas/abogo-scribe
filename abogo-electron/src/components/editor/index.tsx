@@ -1,4 +1,4 @@
-import { CheckSquare, MoreHorizontal } from 'lucide-react';
+import { CheckSquare, Mic, MoreHorizontal, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ export default function NotionEditor() {
   ]);
   const [activeBlock, setActiveBlock] = useState("block-1");
   const blockRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
     if (blockRefs.current[activeBlock]) {
@@ -140,6 +141,10 @@ export default function NotionEditor() {
     }
   };
 
+  const toggleRecording = () => {
+    setIsRecording(!isRecording);
+  };
+
   // Renders a block based on its type with appropriate styling and functionality
   const renderBlock = (block: any, index: number) => {
     const isActive = block.id === activeBlock;
@@ -255,6 +260,43 @@ export default function NotionEditor() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="flex justify-center py-4">
+        {!isRecording ? (
+          <Button
+            variant="outline"
+            size="lg"
+            className="rounded-full px-6 py-6 flex items-center gap-2 bg-primary text-white hover:bg-primary/90 hover:scale-105 transition-all duration-200 hover:text-white"
+            onClick={toggleRecording}
+          >
+            <Mic className="h-5 w-5" />
+            <span>Record</span>
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="lg"
+            className="rounded-full px-6 py-6 flex items-center gap-2 bg-red-500 text-white hover:bg-red-600 hover:scale-105 transition-all duration-200 hover:text-white"
+            onClick={toggleRecording}
+          >
+            <div className="flex items-center gap-1 h-5">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-white rounded-full animate-pulse"
+                  style={{
+                    height: `${Math.max(8, Math.floor(Math.random() * 20))}px`,
+                    animationDelay: `${i * 0.15}s`,
+                    animationDuration: `${0.7 + Math.random() * 0.6}s`,
+                  }}
+                />
+              ))}
+            </div>
+            <Square className="h-4 w-4 ml-1 text-white" />
+            <span>Recording...</span>
+          </Button>
+        )}
       </div>
     </div>
   );
