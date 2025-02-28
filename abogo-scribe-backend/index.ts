@@ -1,7 +1,7 @@
-import axios from 'axios';
 import express from 'express';
-import FormData from 'form-data';
 import { WebSocketServer } from 'ws';
+
+import { transcribeAudio } from './api/openAI';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,29 +31,8 @@ wss.on("connection", (ws) => {
     audioChunks = [];
 
     try {
-      // Prepare FormData for sending to OpenAI
-      const formData = new FormData();
-      formData.append("model", "whisper-1");
-      formData.append("file", audioBuffer, {
-        filename: "audio.wav",
-        contentType: "audio/wav",
-      });
-
-      // Send request to OpenAI Whisper API
-      const apiKey = "your_openai_api_key"; // Replace with your actual API key
-      const response = await axios.post(
-        "https://api.openai.com/v1/audio/transcriptions",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            ...formData.getHeaders(),
-          },
-        }
-      );
-
-      // Send transcription back to the client
-      ws.send(JSON.stringify({ transcription: response.data.text }));
+      const transcription = await transcribeAudio(audioBuffer);
+      ws.send(JSON.stringify({ transcription }));
     } catch (error) {
       console.error("Error transcribing:", error);
       ws.send(JSON.stringify({ error: "Failed to transcribe audio" }));
