@@ -1,4 +1,4 @@
-import { CheckSquare, Heading1, Heading2, List, ListOrdered, MoreHorizontal } from 'lucide-react';
+import { CheckSquare, MoreHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -21,15 +21,6 @@ export default function NotionEditor() {
     blockId: null,
     start: 0,
     end: 0,
-  });
-  const [popoverPosition, setPopoverPosition] = useState<{
-    show: boolean;
-    x: number;
-    y: number;
-  }>({
-    show: false,
-    x: 0,
-    y: 0,
   });
 
   useEffect(() => {
@@ -163,10 +154,7 @@ export default function NotionEditor() {
   // Handles text selection within a block and updates selection state
   const handleSelection = (blockId: string) => {
     const sel = window.getSelection();
-    if (!sel || !sel.rangeCount) {
-      setPopoverPosition({ show: false, x: 0, y: 0 });
-      return;
-    }
+    if (!sel || !sel.rangeCount) return;
 
     const range = sel.getRangeAt(0);
     const selectedText = range.toString();
@@ -178,39 +166,8 @@ export default function NotionEditor() {
         start: range.startOffset,
         end: range.endOffset,
       };
-
-      // Get selection coordinates
-      const rect = range.getBoundingClientRect();
-      setPopoverPosition({
-        show: true,
-        x: rect.left + rect.width / 2,
-        y: rect.top - 10, // Position slightly above the selection
-      });
-
       setSelection(selectionInfo);
-    } else {
-      setPopoverPosition({ show: false, x: 0, y: 0 });
     }
-  };
-
-  // Add this new function to handle text formatting
-  const handleFormatText = (type: string) => {
-    if (!selection.blockId) return;
-
-    const block = blocks.find((b) => b.id === selection.blockId);
-    if (!block) return;
-
-    const blockIndex = blocks.findIndex((b) => b.id === selection.blockId);
-
-    // Instead of splitting into multiple blocks, just change the type of the current block
-    const newBlocks = [...blocks];
-    newBlocks[blockIndex] = {
-      ...block,
-      type,
-    };
-
-    setBlocks(newBlocks);
-    setPopoverPosition({ show: false, x: 0, y: 0 });
   };
 
   // Renders a block based on its type with appropriate styling and functionality
@@ -304,58 +261,8 @@ export default function NotionEditor() {
     }
   };
 
-  // Add this component before the return statement
-  const SelectionToolbar = () => {
-    if (!popoverPosition.show) return null;
-
-    return (
-      <div
-        className="fixed z-50 bg-popover text-popover-foreground shadow-md rounded-md border p-1 flex gap-1"
-        style={{
-          left: `${popoverPosition.x}px`,
-          top: `${popoverPosition.y}px`,
-          transform: "translate(-50%, -100%)",
-        }}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8"
-          onClick={() => handleFormatText("heading-1")}
-        >
-          <Heading1 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8"
-          onClick={() => handleFormatText("heading-2")}
-        >
-          <Heading2 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8"
-          onClick={() => handleFormatText("bullet-list")}
-        >
-          <List className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8"
-          onClick={() => handleFormatText("numbered-list")}
-        >
-          <ListOrdered className="h-4 w-4" />
-        </Button>
-      </div>
-    );
-  };
-
   return (
     <div className="h-full w-full flex flex-col p-14">
-      <SelectionToolbar />
       <div className="flex items-center justify-end p-4 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
