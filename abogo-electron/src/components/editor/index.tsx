@@ -160,20 +160,6 @@ export default function NotionEditor() {
     }
   };
 
-  // Adds a new block of specified type after the currently active block
-  const addBlock = (type: string) => {
-    const newBlockId = `block-${Date.now()}`;
-    const activeIndex = blocks.findIndex((block) => block.id === activeBlock);
-    const newBlocks = [...blocks];
-    newBlocks.splice(activeIndex + 1, 0, {
-      id: newBlockId,
-      type,
-      content: "",
-    });
-    setBlocks(newBlocks);
-    setActiveBlock(newBlockId);
-  };
-
   // Handles text selection within a block and updates selection state
   const handleSelection = (blockId: string) => {
     const sel = window.getSelection();
