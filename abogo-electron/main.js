@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -7,14 +8,46 @@ function createWindow() {
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
-  win.loadURL("http://localhost:5173"); // Vite’s default port
+  win.loadURL("http://localhost:5173"); // Vite's default port
 }
 
 app.whenReady().then(() => {
   createWindow();
+
+  // Handle save audio file request
+  ipcMain.handle("save-audio-file", async (event, { buffer, filename }) => {
+    try {
+      // Show save dialog
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: "Save Recording",
+        defaultPath: path.join(app.getPath("downloads"), filename),
+        filters: [
+          { name: "Audio Files", extensions: ["webm", "mp3", "wav"] },
+          { name: "All Files", extensions: ["*"] },
+        ],
+      });
+
+      if (canceled || !filePath) {
+        return null;
+      }
+
+      // Convert ArrayBuffer to Buffer
+      const fileBuffer = Buffer.from(buffer);
+
+      // Write file to disk
+      fs.writeFileSync(filePath, fileBuffer);
+
+      return filePath;
+    } catch (error) {
+      console.error("Error saving audio file:", error);
+      return null;
+    }
+  });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

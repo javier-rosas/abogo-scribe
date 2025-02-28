@@ -1,7 +1,9 @@
-import { CheckSquare, Mic, MoreHorizontal, Square } from 'lucide-react';
+import { CheckSquare, Mic, MoreHorizontal, Save, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { audioRecorder } from '@/helpers/audio';
 import { cn } from '@/lib/utils';
 
 export default function NotionEditor() {
@@ -12,12 +14,53 @@ export default function NotionEditor() {
   const [activeBlock, setActiveBlock] = useState("block-1");
   const blockRefs = useRef<Record<string, HTMLElement | null>>({});
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [hasRecording, setHasRecording] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (blockRefs.current[activeBlock]) {
       blockRefs.current[activeBlock].focus();
     }
   }, [activeBlock]);
+
+  // Set up audio recorder state change listener
+  useEffect(() => {
+    audioRecorder.onStateChange((state) => {
+      setIsRecording(state.isRecording);
+      if (state.duration) {
+        setRecordingDuration(state.duration);
+      }
+      setHasRecording(!!state.audioBlob);
+    });
+
+    return () => {
+      // Clean up timer on unmount
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Update timer during recording
+  useEffect(() => {
+    if (isRecording) {
+      let startTime = Date.now();
+      timerRef.current = window.setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        setRecordingDuration(elapsed);
+      }, 100);
+    } else if (timerRef.current) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    return () => {
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+      }
+    };
+  }, [isRecording]);
 
   // Gets the current caret (cursor) position within a given HTML element
   const getCaretPosition = (element: HTMLElement): number => {
@@ -141,8 +184,57 @@ export default function NotionEditor() {
     }
   };
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
+  // Format recording time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  // Toggle recording state
+  const toggleRecording = async () => {
+    try {
+      if (isRecording) {
+        audioRecorder.stopRecording();
+      } else {
+        await audioRecorder.startRecording();
+      }
+    } catch (error) {
+      console.error("Error toggling recording:", error);
+      toast.error("Failed to access microphone", {
+        description: "Please check your microphone permissions and try again.",
+      });
+    }
+  };
+
+  // Save recording to file
+  const saveRecording = async () => {
+    try {
+      const title =
+        blocks.find((block) => block.id === "title")?.content || "Untitled";
+      const filename = `${title
+        .replace(/[^a-z0-9]/gi, "-")
+        .toLowerCase()}-${new Date().toISOString().slice(0, 10)}.webm`;
+
+      const savedPath = await audioRecorder.saveRecording(filename);
+
+      if (savedPath) {
+        toast.success("Recording Saved", {
+          description: `Your recording has been saved to: ${savedPath}`,
+        });
+      } else {
+        toast.info("Save Cancelled", {
+          description: "The recording was not saved.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving recording:", error);
+      toast.error("Save Error", {
+        description: "Failed to save the recording.",
+      });
+    }
   };
 
   // Renders a block based on its type with appropriate styling and functionality
@@ -244,6 +336,12 @@ export default function NotionEditor() {
           <Button variant="outline" size="sm">
             Comments
           </Button>
+          {hasRecording && (
+            <Button variant="outline" size="sm" onClick={saveRecording}>
+              <Save className="h-4 w-4 mr-2" />
+              Save Recording
+            </Button>
+          )}
           <Button variant="outline" size="icon">
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -294,7 +392,7 @@ export default function NotionEditor() {
               ))}
             </div>
             <Square className="h-4 w-4 ml-1 text-white" />
-            <span>Recording...</span>
+            <span>Recording... {formatTime(recordingDuration)}</span>
           </Button>
         )}
       </div>
