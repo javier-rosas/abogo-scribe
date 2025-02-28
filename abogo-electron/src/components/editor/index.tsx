@@ -35,6 +35,7 @@ export default function NotionEditor() {
     }
   }, [activeBlock]);
 
+  // Gets the current caret (cursor) position within a given HTML element
   const getCaretPosition = (element: HTMLElement): number => {
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
@@ -46,6 +47,7 @@ export default function NotionEditor() {
     return 0;
   };
 
+  // Sets the caret position at a specific offset within an HTML element
   const setCaretPosition = (element: HTMLElement, position: number) => {
     const range = document.createRange();
     const sel = window.getSelection();
@@ -62,12 +64,14 @@ export default function NotionEditor() {
     sel?.addRange(range);
   };
 
+  // Updates the content of a specific block when it changes
   const handleContentChange = (id: string, content: string) => {
     setBlocks(
       blocks.map((block) => (block.id === id ? { ...block, content } : block))
     );
   };
 
+  // Handles keyboard events for block manipulation (delete, enter, backspace)
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLDivElement>,
     _id: string,
@@ -154,6 +158,7 @@ export default function NotionEditor() {
     }
   };
 
+  // Adds a new block of specified type after the currently active block
   const addBlock = (type: string) => {
     const newBlockId = `block-${Date.now()}`;
     const activeIndex = blocks.findIndex((block) => block.id === activeBlock);
@@ -167,6 +172,7 @@ export default function NotionEditor() {
     setActiveBlock(newBlockId);
   };
 
+  // Changes the type of an existing block (e.g., from paragraph to heading)
   const changeBlockType = (id: string, newType: string) => {
     setBlocks(
       blocks.map((block) =>
@@ -175,6 +181,7 @@ export default function NotionEditor() {
     );
   };
 
+  // Handles text selection within a block and updates selection state
   const handleSelection = (blockId: string) => {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
@@ -195,6 +202,7 @@ export default function NotionEditor() {
     }
   };
 
+  // Renders a block based on its type with appropriate styling and functionality
   const renderBlock = (block: any, index: number) => {
     const isActive = block.id === activeBlock;
 
