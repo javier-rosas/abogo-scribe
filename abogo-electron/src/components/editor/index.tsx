@@ -1,14 +1,7 @@
-import {
-    Bold, CheckSquare, Code, Heading1, Heading2, ImageIcon, Italic, Link, List, ListOrdered,
-    MoreHorizontal, Plus, Type
-} from 'lucide-react';
+import { CheckSquare, Heading1, Heading2, List, ListOrdered, MoreHorizontal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 export default function NotionEditor() {
@@ -94,7 +87,6 @@ export default function NotionEditor() {
       e.preventDefault();
 
       const previousBlock = blocks[index - 1];
-      const currentBlock = blocks[index];
       const previousContent = previousBlock.content;
 
       const newBlocks = blocks.filter((_, i) => i !== index);
@@ -180,15 +172,6 @@ export default function NotionEditor() {
     });
     setBlocks(newBlocks);
     setActiveBlock(newBlockId);
-  };
-
-  // Changes the type of an existing block (e.g., from paragraph to heading)
-  const changeBlockType = (id: string, newType: string) => {
-    setBlocks(
-      blocks.map((block) =>
-        block.id === id ? { ...block, type: newType } : block
-      )
-    );
   };
 
   // Handles text selection within a block and updates selection state
@@ -330,12 +313,6 @@ export default function NotionEditor() {
             <div {...blockProps}>{content}</div>
           </div>
         );
-      case "code":
-        return (
-          <pre className="bg-muted p-2 rounded-md my-2">
-            <code {...blockProps} className="font-mono text-sm" />
-          </pre>
-        );
       default:
         return <div {...blockProps}>{content}</div>;
     }
@@ -386,14 +363,6 @@ export default function NotionEditor() {
         >
           <ListOrdered className="h-4 w-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8"
-          onClick={() => handleFormatText("code")}
-        >
-          <Code className="h-4 w-4" />
-        </Button>
       </div>
     );
   };
@@ -401,21 +370,7 @@ export default function NotionEditor() {
   return (
     <div className="h-full w-full flex flex-col p-14">
       <SelectionToolbar />
-      <div className="flex items-center justify-between p-4 border-b shrink-0">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
-            <Bold className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Italic className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Link className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Code className="h-4 w-4" />
-          </Button>
-        </div>
+      <div className="flex items-center justify-end p-4 border-b shrink-0">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             Share
@@ -434,51 +389,6 @@ export default function NotionEditor() {
           <div className="space-y-2">
             {blocks.map((block, index) => (
               <div key={block.id} className="group relative">
-                <div className="absolute left-0 -ml-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => addBlock("paragraph")}>
-                        <Type className="mr-2 h-4 w-4" />
-                        <span>Text</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => addBlock("heading-1")}>
-                        <Heading1 className="mr-2 h-4 w-4" />
-                        <span>Heading 1</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => addBlock("heading-2")}>
-                        <Heading2 className="mr-2 h-4 w-4" />
-                        <span>Heading 2</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => addBlock("bullet-list")}>
-                        <List className="mr-2 h-4 w-4" />
-                        <span>Bullet List</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => addBlock("numbered-list")}
-                      >
-                        <ListOrdered className="mr-2 h-4 w-4" />
-                        <span>Numbered List</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => addBlock("todo")}>
-                        <CheckSquare className="mr-2 h-4 w-4" />
-                        <span>To-do</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => addBlock("code")}>
-                        <Code className="mr-2 h-4 w-4" />
-                        <span>Code</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => addBlock("image")}>
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        <span>Image</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
                 {renderBlock(block, index)}
               </div>
             ))}
