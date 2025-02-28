@@ -17,6 +17,17 @@ export default function NotionEditor() {
   ]);
   const [activeBlock, setActiveBlock] = useState("block-1");
   const blockRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [selection, setSelection] = useState<{
+    text: string;
+    blockId: string | null;
+    start: number;
+    end: number;
+  }>({
+    text: "",
+    blockId: null,
+    start: 0,
+    end: 0,
+  });
 
   useEffect(() => {
     if (blockRefs.current[activeBlock]) {
@@ -164,6 +175,26 @@ export default function NotionEditor() {
     );
   };
 
+  const handleSelection = (blockId: string) => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+
+    const range = sel.getRangeAt(0);
+    const selectedText = range.toString();
+
+    if (selectedText) {
+      const selectionInfo = {
+        text: selectedText,
+        blockId,
+        start: range.startOffset,
+        end: range.endOffset,
+      };
+
+      setSelection(selectionInfo);
+      console.log("Selection Details:", selectionInfo);
+    }
+  };
+
   const renderBlock = (block: any, index: number) => {
     const isActive = block.id === activeBlock;
 
@@ -179,11 +210,14 @@ export default function NotionEditor() {
         handleContentChange(block.id, e.target.innerText),
       onKeyDown: (e: React.KeyboardEvent<HTMLHeadingElement>) =>
         handleKeyDown(e, block.id, index),
+      onMouseUp: () => handleSelection(block.id),
+      onKeyUp: () => handleSelection(block.id),
       ref: (el: HTMLElement | null) => {
         blockRefs.current[block.id] = el;
       },
-      dangerouslySetInnerHTML: { __html: block.content },
     };
+
+    const content = block.content || "";
 
     switch (block.type) {
       case "title":
@@ -192,41 +226,49 @@ export default function NotionEditor() {
             {...blockProps}
             className="text-4xl font-bold w-full outline-none py-2 px-2"
             data-placeholder="Untitled"
-          />
+          >
+            {content}
+          </h1>
         );
       case "heading-1":
         return (
           <h1
             {...blockProps}
             className="text-3xl font-bold w-full outline-none py-2 px-2"
-          />
+          >
+            {content}
+          </h1>
         );
       case "heading-2":
         return (
           <h2
             {...blockProps}
             className="text-2xl font-bold w-full outline-none py-2 px-2"
-          />
+          >
+            {content}
+          </h2>
         );
       case "heading-3":
         return (
           <h3
             {...blockProps}
             className="text-xl font-bold w-full outline-none py-2 px-2"
-          />
+          >
+            {content}
+          </h3>
         );
       case "bullet-list":
         return (
           <div className="flex items-start gap-2">
             <span className="mt-1.5">•</span>
-            <div {...blockProps} />
+            <div {...blockProps}>{content}</div>
           </div>
         );
       case "numbered-list":
         return (
           <div className="flex items-start gap-2">
             <span className="mt-1.5">{index}.</span>
-            <div {...blockProps} />
+            <div {...blockProps}>{content}</div>
           </div>
         );
       case "todo":
@@ -235,7 +277,7 @@ export default function NotionEditor() {
             <div className="mt-1.5 w-4 h-4 border rounded flex items-center justify-center">
               {block.checked && <CheckSquare className="w-3 h-3" />}
             </div>
-            <div {...blockProps} />
+            <div {...blockProps}>{content}</div>
           </div>
         );
       case "code":
@@ -245,7 +287,7 @@ export default function NotionEditor() {
           </pre>
         );
       default:
-        return <div {...blockProps} />;
+        return <div {...blockProps}>{content}</div>;
     }
   };
 
