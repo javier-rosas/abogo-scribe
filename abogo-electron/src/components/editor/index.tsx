@@ -11,17 +11,6 @@ export default function NotionEditor() {
   ]);
   const [activeBlock, setActiveBlock] = useState("block-1");
   const blockRefs = useRef<Record<string, HTMLElement | null>>({});
-  const [selection, setSelection] = useState<{
-    text: string;
-    blockId: string | null;
-    start: number;
-    end: number;
-  }>({
-    text: "",
-    blockId: null,
-    start: 0,
-    end: 0,
-  });
 
   useEffect(() => {
     if (blockRefs.current[activeBlock]) {
@@ -151,25 +140,6 @@ export default function NotionEditor() {
     }
   };
 
-  // Handles text selection within a block and updates selection state
-  const handleSelection = (blockId: string) => {
-    const sel = window.getSelection();
-    if (!sel || !sel.rangeCount) return;
-
-    const range = sel.getRangeAt(0);
-    const selectedText = range.toString();
-
-    if (selectedText) {
-      const selectionInfo = {
-        text: selectedText,
-        blockId,
-        start: range.startOffset,
-        end: range.endOffset,
-      };
-      setSelection(selectionInfo);
-    }
-  };
-
   // Renders a block based on its type with appropriate styling and functionality
   const renderBlock = (block: any, index: number) => {
     const isActive = block.id === activeBlock;
@@ -186,8 +156,6 @@ export default function NotionEditor() {
         handleContentChange(block.id, e.target.innerText),
       onKeyDown: (e: React.KeyboardEvent<HTMLHeadingElement>) =>
         handleKeyDown(e, block.id, index),
-      onMouseUp: () => handleSelection(block.id),
-      onKeyUp: () => handleSelection(block.id),
       ref: (el: HTMLElement | null) => {
         blockRefs.current[block.id] = el;
       },
