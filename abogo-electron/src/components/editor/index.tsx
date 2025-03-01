@@ -68,16 +68,13 @@ export default function NotionEditor() {
     // Set up transcription handler for batch processing
     audioRecorder.onTranscriptionUpdate = (text: string) => {
       // Filter out known boilerplate phrases
-      const filteredText = text.replace(
-        /Subtítulos realizados por la comunidad de Amara\.org/gi,
-        ""
-      );
+      const filteredText = text.trim();
 
-      if (filteredText.trim()) {
+      if (filteredText) {
         setTranscription(filteredText);
 
         // Add transcription to the editor
-        if (filteredText && activeBlock) {
+        if (activeBlock) {
           const activeBlockIndex = blocks.findIndex(
             (block) => block.id === activeBlock
           );
