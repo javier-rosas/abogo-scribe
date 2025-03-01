@@ -5,8 +5,6 @@ const ELEVENLABS_API_KEY =
 
 const client = new ElevenLabsClient({ apiKey: ELEVENLABS_API_KEY });
 
-console.log("ELEVENLABS_API_KEY", ELEVENLABS_API_KEY);
-
 export async function transcribeAudioElevenLabs(
   audioBuffer: Buffer
 ): Promise<string> {
