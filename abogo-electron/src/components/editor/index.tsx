@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { audioRecorder } from '@/helpers/audio';
-import { audioStreamer } from '@/helpers/streamAudio';
 import { cn } from '@/lib/utils';
 
 export default function NotionEditor() {
@@ -64,10 +63,10 @@ export default function NotionEditor() {
     };
   }, [isRecording]);
 
-  // Add a new useEffect to handle transcription updates
+  // Replace the streaming transcription useEffect with this new one
   useEffect(() => {
-    // Set up transcription handler
-    audioStreamer.options.onTranscription = (text) => {
+    // Set up transcription handler for batch processing
+    audioRecorder.onTranscriptionUpdate = (text: string) => {
       // Filter out known boilerplate phrases
       const filteredText = text.replace(
         /Subtítulos realizados por la comunidad de Amara\.org/gi,
@@ -77,8 +76,7 @@ export default function NotionEditor() {
       if (filteredText.trim()) {
         setTranscription(filteredText);
 
-        // Optionally add transcription to the editor
-        // You could append it to the current active block or create a new block
+        // Add transcription to the editor
         if (filteredText && activeBlock) {
           const activeBlockIndex = blocks.findIndex(
             (block) => block.id === activeBlock
@@ -103,7 +101,7 @@ export default function NotionEditor() {
 
     return () => {
       // Clean up
-      audioStreamer.options.onTranscription = undefined;
+      audioRecorder.onTranscriptionUpdate = undefined;
     };
   }, [blocks, activeBlock]);
 

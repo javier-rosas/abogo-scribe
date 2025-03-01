@@ -1,4 +1,4 @@
-// Audio recording helper functions
+import { transcribeAudio } from '../api/transcribe';
 
 // Interface for recording options
 export interface RecordingOptions {
@@ -21,18 +21,18 @@ const defaultOptions: RecordingOptions = {
   audioBitsPerSecond: 128000,
 };
 
-// After the import statements, add:
-import { audioStreamer } from './streamAudio';
+const RECORDING_INTERVAL = 2500;
 
 // Class to handle audio recording
 export class AudioRecorder {
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
   private stream: MediaStream | null = null;
   private options: RecordingOptions;
   private recordingState: RecordingState = { isRecording: false };
   private onStateChangeCallback: ((state: RecordingState) => void) | null =
     null;
+  private activeRecorders: MediaRecorder[] = [];
+  private recordingCycleInterval: any = null;
+  private _onTranscriptionUpdate: ((text: string) => void) | undefined;
 
   constructor(options: RecordingOptions = {}) {
     this.options = { ...defaultOptions, ...options };
@@ -51,7 +51,7 @@ export class AudioRecorder {
     }
   }
 
-  // Start recording
+  // Start recording using 5-second cycles with a 100ms overlap
   public async startRecording(): Promise<void> {
     try {
       // Request microphone access
@@ -60,69 +60,81 @@ export class AudioRecorder {
       // Check for supported MIME types
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
-        : "audio/webm"; // Fallback to basic webm if opus not supported
+        : "audio/webm";
 
       console.log("Using MIME type:", mimeType);
-      const supported = MediaRecorder.isTypeSupported(mimeType);
-      console.log(`MIME type ${mimeType} supported:`, supported);
 
-      // Create media recorder with supported MIME type
-      this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: mimeType,
-        audioBitsPerSecond: this.options.audioBitsPerSecond,
-      });
+      // Clear any existing cycle if any
+      if (this.recordingCycleInterval) {
+        clearInterval(this.recordingCycleInterval);
+      }
 
-      // Clear previous recording data
-      this.audioChunks = [];
+      // Immediately start a recorder so that transcribeAudio is called right away
+      if (this.stream) {
+        const streamClone = this.stream.clone();
+        const immediateRecorder = new MediaRecorder(streamClone, {
+          mimeType,
+          audioBitsPerSecond: this.options.audioBitsPerSecond,
+        });
 
-      // Connect to the WebSocket server for streaming
-      audioStreamer.connect();
-
-      // Handle data available event
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          // Convert Blob to ArrayBuffer and send as-is
-          const reader = new FileReader();
-          reader.onload = () => {
-            if (audioStreamer.isReady() && reader.result) {
-              audioStreamer.sendAudioChunk(reader.result as ArrayBuffer);
+        immediateRecorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            try {
+              const transcription = await transcribeAudio(event.data);
+              if (this._onTranscriptionUpdate) {
+                this._onTranscriptionUpdate(transcription);
+              }
+            } catch (error) {
+              console.error("Error processing audio chunk:", error);
             }
-          };
-          reader.readAsArrayBuffer(event.data);
-        }
-      };
+          }
+        };
 
-      // Handle recording stop
-      this.mediaRecorder.onstop = () => {
-        // Create blob from chunks
-        const audioBlob = new Blob(this.audioChunks, {
-          type: this.options.mimeType,
-        });
-        const audioUrl = URL.createObjectURL(audioBlob);
+        immediateRecorder.start();
+        this.activeRecorders.push(immediateRecorder);
 
-        // Calculate duration
-        const endTime = new Date();
-        const duration = this.recordingState.startTime
-          ? (endTime.getTime() - this.recordingState.startTime.getTime()) / 1000
-          : 0;
+        // Stop this recorder after 5 seconds
+        setTimeout(() => {
+          if (immediateRecorder.state !== "inactive") {
+            immediateRecorder.stop();
+          }
+        }, RECORDING_INTERVAL);
+      }
 
-        // Update state with recording data
-        this.updateState({
-          isRecording: false,
-          audioBlob,
-          audioUrl,
-          duration,
+      // Start a cycle: start a new recorder every 4900ms (for 5-second recordings with ~100ms overlap)
+      this.recordingCycleInterval = setInterval(() => {
+        if (!this.stream) return;
+
+        // Clone stream so each recorder works independently
+        const streamClone = this.stream.clone();
+        const recorder = new MediaRecorder(streamClone, {
+          mimeType,
+          audioBitsPerSecond: this.options.audioBitsPerSecond,
         });
 
-        // Stop all tracks
-        if (this.stream) {
-          this.stream.getTracks().forEach((track) => track.stop());
-          this.stream = null;
-        }
-      };
+        recorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            try {
+              const transcription = await transcribeAudio(event.data);
+              if (this._onTranscriptionUpdate) {
+                this._onTranscriptionUpdate(transcription);
+              }
+            } catch (error) {
+              console.error("Error processing audio chunk:", error);
+            }
+          }
+        };
 
-      // Start recording
-      this.mediaRecorder.start(100); // Collect data every 100ms
+        recorder.start();
+        this.activeRecorders.push(recorder);
+
+        // Stop this recorder after 5 seconds
+        setTimeout(() => {
+          if (recorder.state !== "inactive") {
+            recorder.stop();
+          }
+        }, RECORDING_INTERVAL);
+      }, RECORDING_INTERVAL - 100);
 
       // Update state
       this.updateState({
@@ -138,14 +150,30 @@ export class AudioRecorder {
     }
   }
 
-  // Stop recording
+  // Stop recording and clear the cycle
   public stopRecording(): void {
-    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
-      this.mediaRecorder.stop();
+    if (this.recordingCycleInterval) {
+      clearInterval(this.recordingCycleInterval);
+      this.recordingCycleInterval = null;
     }
 
-    // Disconnect from the WebSocket server
-    audioStreamer.disconnect();
+    // Stop all active recorders
+    this.activeRecorders.forEach((recorder) => {
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    });
+    this.activeRecorders = [];
+
+    // Stop all tracks
+    if (this.stream) {
+      this.stream.getTracks().forEach((track) => track.stop());
+      this.stream = null;
+    }
+
+    this.updateState({
+      isRecording: false,
+    });
   }
 
   // Get current recording state
@@ -182,6 +210,13 @@ export class AudioRecorder {
       console.error("Error saving recording:", error);
       return null;
     }
+  }
+
+  // Add this method to set the transcription callback
+  public set onTranscriptionUpdate(
+    callback: ((text: string) => void) | undefined
+  ) {
+    this._onTranscriptionUpdate = callback;
   }
 }
 
