@@ -1,7 +1,8 @@
 import cors from 'cors';
 import express from 'express';
 
-import { transcribeAudio } from './api/openAI';
+// import { transcribeAudioOpenAI } from './api/openAI';
+import { transcribeAudioElevenLabs } from './api/elevenLabs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,7 +18,7 @@ app.use(express.raw({ type: "audio/webm", limit: "50mb" }));
 app.post("/transcribe", async (req, res) => {
   try {
     const audioBuffer = req.body;
-    const transcription = await transcribeAudio(audioBuffer);
+    const transcription = await transcribeAudioElevenLabs(audioBuffer);
     res.json({ transcription });
   } catch (error) {
     console.error("Error transcribing:", error);

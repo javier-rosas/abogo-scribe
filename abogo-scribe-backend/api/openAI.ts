@@ -4,7 +4,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || Bun.env.OPENAI_API_KEY,
 });
 
-export async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
+export async function transcribeAudioOpenAI(
+  audioBuffer: Buffer
+): Promise<string> {
   try {
     // Create a File object from the buffer
     const file = new File([audioBuffer], "audio.webm", {
