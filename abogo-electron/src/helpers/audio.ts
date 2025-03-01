@@ -17,9 +17,12 @@ export interface RecordingState {
 
 // Default recording options
 const defaultOptions: RecordingOptions = {
-  mimeType: "audio/webm",
+  mimeType: "audio/webm;codecs=opus",
   audioBitsPerSecond: 128000,
 };
+
+// After the import statements, add:
+import { audioStreamer } from './streamAudio';
 
 // Class to handle audio recording
 export class AudioRecorder {
@@ -54,19 +57,38 @@ export class AudioRecorder {
       // Request microphone access
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Create media recorder
+      // Check for supported MIME types
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm"; // Fallback to basic webm if opus not supported
+
+      console.log("Using MIME type:", mimeType);
+      const supported = MediaRecorder.isTypeSupported(mimeType);
+      console.log(`MIME type ${mimeType} supported:`, supported);
+
+      // Create media recorder with supported MIME type
       this.mediaRecorder = new MediaRecorder(this.stream, {
-        mimeType: this.options.mimeType,
+        mimeType: mimeType,
         audioBitsPerSecond: this.options.audioBitsPerSecond,
       });
 
       // Clear previous recording data
       this.audioChunks = [];
 
+      // Connect to the WebSocket server for streaming
+      audioStreamer.connect();
+
       // Handle data available event
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
+          // Convert Blob to ArrayBuffer and send as-is
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (audioStreamer.isReady() && reader.result) {
+              audioStreamer.sendAudioChunk(reader.result as ArrayBuffer);
+            }
+          };
+          reader.readAsArrayBuffer(event.data);
         }
       };
 
@@ -121,6 +143,9 @@ export class AudioRecorder {
     if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
       this.mediaRecorder.stop();
     }
+
+    // Disconnect from the WebSocket server
+    audioStreamer.disconnect();
   }
 
   // Get current recording state

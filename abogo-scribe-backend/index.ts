@@ -6,32 +6,30 @@ import { transcribeAudio } from './api/openAI';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Create WebSocket Server on port 8080
 const wss = new WebSocketServer({ port: 8080 });
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
 
-  // A buffer for incoming audio data (per WebSocket connection)
-  let audioChunks: Buffer[] = [];
-
-  // A simple timer to transcribe periodically (e.g., every 5 seconds)
+  let sessionChunks: Buffer[] = [];
+  let currentChunks: Buffer[] = [];
+  let isFirstChunk = true;
   const TRANSCRIBE_INTERVAL_MS = 5000;
 
-  // Set up an interval that fires every 5 seconds
-  // Each client gets its own interval
   const transcribeInterval = setInterval(async () => {
-    if (audioChunks.length === 0) {
-      return; // No data to transcribe
-    }
+    if (currentChunks.length === 0) return;
 
-    // Combine all chunks into one buffer
-    const audioBuffer = Buffer.concat(audioChunks);
-    // Reset the chunks for the next interval
-    audioChunks = [];
+    // Add new chunks to the session
+    sessionChunks.push(...currentChunks);
+
+    // Create a complete WebM file from the beginning of the session
+    const completeAudioBuffer = Buffer.concat(sessionChunks);
+
+    // Clear current chunks for next interval
+    currentChunks = [];
 
     try {
-      const transcription = await transcribeAudio(audioBuffer);
+      const transcription = await transcribeAudio(completeAudioBuffer);
       ws.send(JSON.stringify({ transcription }));
     } catch (error) {
       console.error("Error transcribing:", error);
@@ -39,15 +37,29 @@ wss.on("connection", (ws) => {
     }
   }, TRANSCRIBE_INTERVAL_MS);
 
-  // Listen for audio data from the client
   ws.on("message", (message) => {
-    audioChunks.push(Buffer.from(message as Buffer));
+    const chunk = Buffer.from(message as Buffer);
+
+    // Store the chunk
+    currentChunks.push(chunk);
+
+    // If this is the first chunk of the session, log its beginning for debugging
+    if (isFirstChunk) {
+      console.log(
+        "First chunk header (hex):",
+        chunk.slice(0, 16).toString("hex")
+      );
+      isFirstChunk = false;
+    }
   });
 
-  // Cleanup when the client disconnects
   ws.on("close", () => {
     console.log("Client disconnected");
     clearInterval(transcribeInterval);
+    // Clear the buffers
+    sessionChunks = [];
+    currentChunks = [];
+    isFirstChunk = true;
   });
 });
 

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { audioRecorder } from '@/helpers/audio';
+import { audioStreamer } from '@/helpers/streamAudio';
 import { cn } from '@/lib/utils';
 
 export default function NotionEditor() {
@@ -17,6 +18,7 @@ export default function NotionEditor() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [hasRecording, setHasRecording] = useState(false);
   const timerRef = useRef<number | null>(null);
+  const [transcription, setTranscription] = useState<string>("");
 
   useEffect(() => {
     if (blockRefs.current[activeBlock]) {
@@ -61,6 +63,49 @@ export default function NotionEditor() {
       }
     };
   }, [isRecording]);
+
+  // Add a new useEffect to handle transcription updates
+  useEffect(() => {
+    // Set up transcription handler
+    audioStreamer.options.onTranscription = (text) => {
+      // Filter out known boilerplate phrases
+      const filteredText = text.replace(
+        /Subtítulos realizados por la comunidad de Amara\.org/gi,
+        ""
+      );
+
+      if (filteredText.trim()) {
+        setTranscription(filteredText);
+
+        // Optionally add transcription to the editor
+        // You could append it to the current active block or create a new block
+        if (filteredText && activeBlock) {
+          const activeBlockIndex = blocks.findIndex(
+            (block) => block.id === activeBlock
+          );
+          if (activeBlockIndex >= 0) {
+            const newBlocks = [...blocks];
+            const currentContent = newBlocks[activeBlockIndex].content;
+
+            // Append transcription to the current block
+            newBlocks[activeBlockIndex] = {
+              ...newBlocks[activeBlockIndex],
+              content: currentContent
+                ? `${currentContent} ${filteredText}`
+                : filteredText,
+            };
+
+            setBlocks(newBlocks);
+          }
+        }
+      }
+    };
+
+    return () => {
+      // Clean up
+      audioStreamer.options.onTranscription = undefined;
+    };
+  }, [blocks, activeBlock]);
 
   // Gets the current caret (cursor) position within a given HTML element
   const getCaretPosition = (element: HTMLElement): number => {
@@ -372,28 +417,39 @@ export default function NotionEditor() {
             <span>Record</span>
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            size="lg"
-            className="rounded-full px-6 py-6 flex items-center gap-2 bg-red-500 text-white hover:bg-red-600 hover:scale-105 transition-all duration-200 hover:text-white"
-            onClick={toggleRecording}
-          >
-            <div className="flex items-center gap-1 h-5">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="w-1 bg-white rounded-full animate-pulse"
-                  style={{
-                    height: `${Math.max(8, Math.floor(Math.random() * 20))}px`,
-                    animationDelay: `${i * 0.15}s`,
-                    animationDuration: `${0.7 + Math.random() * 0.6}s`,
-                  }}
-                />
-              ))}
-            </div>
-            <Square className="h-4 w-4 ml-1 text-white" />
-            <span>Recording... {formatTime(recordingDuration)}</span>
-          </Button>
+          <div className="flex flex-col items-center">
+            <Button
+              variant="outline"
+              size="lg"
+              className="rounded-full px-6 py-6 flex items-center gap-2 bg-red-500 text-white hover:bg-red-600 hover:scale-105 transition-all duration-200 hover:text-white"
+              onClick={toggleRecording}
+            >
+              <div className="flex items-center gap-1 h-5">
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-1 bg-white rounded-full animate-pulse"
+                    style={{
+                      height: `${Math.max(
+                        8,
+                        Math.floor(Math.random() * 20)
+                      )}px`,
+                      animationDelay: `${i * 0.15}s`,
+                      animationDuration: `${0.7 + Math.random() * 0.6}s`,
+                    }}
+                  />
+                ))}
+              </div>
+              <Square className="h-4 w-4 ml-1 text-white" />
+              <span>Recording... {formatTime(recordingDuration)}</span>
+            </Button>
+
+            {transcription && (
+              <div className="mt-4 text-sm text-muted-foreground max-w-md">
+                <em>Transcribing: "{transcription}"</em>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
