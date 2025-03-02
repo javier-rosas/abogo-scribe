@@ -1,11 +1,11 @@
 import './App.css';
 
-import Editor from './components/editor';
+import Dashboard from './components/dashboard';
 
 function App() {
   return (
     <div className="h-screen w-screen overflow-hidden ">
-      <Editor />
+      <Dashboard />
     </div>
   );
 }

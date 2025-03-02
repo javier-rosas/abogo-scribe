@@ -1,0 +1,14 @@
+export interface Meeting {
+  id: number;
+  title: string;
+  date: string;
+  startTime: string;
+  duration: number;
+  participants: string[];
+  color: string;
+}
+
+export interface GroupedMeetings {
+  date: string;
+  meetings: Meeting[];
+}
