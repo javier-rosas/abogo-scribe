@@ -1,6 +1,3 @@
-import { useState } from 'react';
-
-import Editor from '@/components/editor';
 import { GroupedMeetings, Meeting } from '@/types';
 
 import { MeetingItem } from './meeting-item';
@@ -79,13 +76,15 @@ const groupMeetingsByDate = (meetings: Meeting[]): GroupedMeetings[] => {
   }));
 };
 
-export function MeetingList() {
+export function MeetingList({
+  onMeetingSelect,
+}: {
+  onMeetingSelect: (meeting: Meeting) => void;
+}) {
   const groupedMeetings: GroupedMeetings[] = groupMeetingsByDate(meetings);
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
 
   return (
     <div className="space-y-10">
-      {selectedMeeting && <Editor />}
       {groupedMeetings.map((group) => (
         <div key={group.date} className="space-y-4">
           <h2 className="text-lg font-medium text-foreground/80 px-1">
@@ -97,7 +96,11 @@ export function MeetingList() {
           </h2>
           <div className="space-y-3">
             {group.meetings.map((meeting: Meeting) => (
-              <MeetingItem key={meeting.id} meeting={meeting} />
+              <MeetingItem
+                key={meeting.id}
+                meeting={meeting}
+                onClick={() => onMeetingSelect(meeting)}
+              />
             ))}
           </div>
         </div>

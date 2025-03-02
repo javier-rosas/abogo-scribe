@@ -1,6 +1,12 @@
+import { Meeting } from '@/types';
+
 import { MeetingList } from './meeting-list';
 
-export default function Dashboard() {
+export default function Dashboard({
+  onMeetingSelect,
+}: {
+  onMeetingSelect: (meeting: Meeting) => void;
+}) {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6">
@@ -11,7 +17,7 @@ export default function Dashboard() {
           </p>
         </header>
 
-        <MeetingList />
+        <MeetingList onMeetingSelect={onMeetingSelect} />
       </div>
     </div>
   );

@@ -1,12 +1,19 @@
-import { CheckSquare, Mic, MoreHorizontal, Save, Square } from 'lucide-react';
+import { CheckSquare, ChevronLeft, Mic, MoreHorizontal, Save, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { audioRecorder } from '@/helpers/audio';
 import { cn } from '@/lib/utils';
+import { Meeting } from '@/types';
 
-export default function NotionEditor() {
+export default function Editor({
+  meeting,
+  onBack,
+}: {
+  meeting: Meeting;
+  onBack: () => void;
+}) {
   const [blocks, setBlocks] = useState([
     { id: "title", type: "title", content: "Untitled" },
     { id: "block-1", type: "paragraph", content: "" },
@@ -300,6 +307,8 @@ export default function NotionEditor() {
 
     const content = block.content || "";
 
+    console.log(meeting);
+
     switch (block.type) {
       case "title":
         return (
@@ -368,7 +377,10 @@ export default function NotionEditor() {
 
   return (
     <div className="h-full w-full flex flex-col p-14">
-      <div className="flex items-center justify-end p-4 border-b shrink-0">
+      <div className="flex items-center justify-between p-4 border-b shrink-0">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             Share

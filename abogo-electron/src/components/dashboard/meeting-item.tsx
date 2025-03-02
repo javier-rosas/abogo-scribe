@@ -2,7 +2,13 @@ import { ClockIcon } from 'lucide-react';
 
 import { Meeting } from '@/types';
 
-export function MeetingItem({ meeting }: { meeting: Meeting }) {
+export function MeetingItem({
+  meeting,
+  onClick,
+}: {
+  meeting: Meeting;
+  onClick?: () => void;
+}) {
   // Format the time to display
   const formatTime = (timeString: string) => {
     const [hours, minutes] = timeString.split(":");
@@ -31,7 +37,10 @@ export function MeetingItem({ meeting }: { meeting: Meeting }) {
   );
 
   return (
-    <div className="group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all duration-200">
+    <div
+      className="group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+      onClick={onClick}
+    >
       <div className="flex items-start gap-4">
         <div
           className={`flex-shrink-0 w-2 h-12 rounded-full ${
