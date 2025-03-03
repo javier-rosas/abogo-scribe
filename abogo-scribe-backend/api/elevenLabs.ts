@@ -20,9 +20,10 @@ export async function transcribeAudioElevenLabs(
       model_id: "scribe_v1",
       // tag_audio_events: true,
       language_code: "es",
+      diarize: true,
     });
 
-    console.log("Transcription:", transcription.text);
+    console.log("Transcription:", transcription);
     return transcription.text;
   } catch (error) {
     console.error("Transcription error:", error);

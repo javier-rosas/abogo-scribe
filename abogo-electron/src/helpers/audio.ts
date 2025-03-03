@@ -21,7 +21,7 @@ const defaultOptions: RecordingOptions = {
   audioBitsPerSecond: 128000,
 };
 
-const RECORDING_INTERVAL = 1000;
+const RECORDING_INTERVAL = 5000;
 
 // Class to handle audio recording
 export class AudioRecorder {

@@ -7,6 +7,11 @@ import { audioRecorder } from '@/helpers/audio';
 import { cn } from '@/lib/utils';
 import { Meeting } from '@/types';
 
+interface TranscriptionEntry {
+  text: string;
+  timestamp: number;
+}
+
 export default function Editor({
   meeting,
   onBack,
@@ -21,10 +26,11 @@ export default function Editor({
   const [activeBlock, setActiveBlock] = useState("block-1");
   const blockRefs = useRef<Record<string, HTMLElement | null>>({});
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
   const [hasRecording, setHasRecording] = useState(false);
-  const timerRef = useRef<number | null>(null);
   const [transcription, setTranscription] = useState<string>("");
+  const [transcriptionHistory, setTranscriptionHistory] = useState<
+    TranscriptionEntry[]
+  >([]);
 
   useEffect(() => {
     if (blockRefs.current[activeBlock]) {
@@ -32,53 +38,29 @@ export default function Editor({
     }
   }, [activeBlock]);
 
-  // Set up audio recorder state change listener
+  // Remove the recording duration effect and modify the audio recorder state change listener
   useEffect(() => {
     audioRecorder.onStateChange((state) => {
       setIsRecording(state.isRecording);
-      if (state.duration) {
-        setRecordingDuration(state.duration);
-      }
       setHasRecording(!!state.audioBlob);
     });
-
-    return () => {
-      // Clean up timer on unmount
-      if (timerRef.current) {
-        window.clearInterval(timerRef.current);
-      }
-    };
   }, []);
-
-  // Update timer during recording
-  useEffect(() => {
-    if (isRecording) {
-      let startTime = Date.now();
-      timerRef.current = window.setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000;
-        setRecordingDuration(elapsed);
-      }, 100);
-    } else if (timerRef.current) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    return () => {
-      if (timerRef.current) {
-        window.clearInterval(timerRef.current);
-      }
-    };
-  }, [isRecording]);
 
   // Replace the streaming transcription useEffect with this new one
   useEffect(() => {
-    // Set up transcription handler for batch processing
     audioRecorder.onTranscriptionUpdate = (text: string) => {
-      // Filter out known boilerplate phrases
       const filteredText = text.trim();
 
       if (filteredText) {
         setTranscription(filteredText);
+        // Add new transcription entry to history
+        setTranscriptionHistory((prev) => [
+          ...prev,
+          {
+            text: filteredText,
+            timestamp: Date.now(),
+          },
+        ]);
 
         // Add transcription to the editor
         if (activeBlock) {
@@ -231,15 +213,6 @@ export default function Editor({
     }
   };
 
-  // Format recording time as MM:SS
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
   // Toggle recording state
   const toggleRecording = async () => {
     try {
@@ -375,8 +348,42 @@ export default function Editor({
     }
   };
 
+  // Add this new component within the Editor
+  const Conversation = () => {
+    return (
+      <div className="w-80 border-r bg-muted/10 overflow-y-auto flex flex-col">
+        <div className="p-4 border-b">
+          <h2 className="font-semibold">Transcription</h2>
+        </div>
+        <div className="flex-1 p-4 space-y-4">
+          {transcriptionHistory.map((entry, index) => (
+            <div
+              key={entry.timestamp}
+              className="flex flex-col space-y-1 animate-fade-in"
+            >
+              <div className="text-xs text-muted-foreground">
+                {new Date(entry.timestamp).toLocaleTimeString()}
+              </div>
+              <div className="bg-background rounded-lg p-3 shadow-sm">
+                {entry.text}
+              </div>
+            </div>
+          ))}
+          {isRecording && transcription && (
+            <div className="flex flex-col space-y-1">
+              <div className="text-xs text-muted-foreground">Live</div>
+              <div className="bg-background rounded-lg p-3 shadow-sm border-primary/20 border animate-pulse">
+                {transcription}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="h-full w-full flex flex-col p-14">
+    <div className="h-full w-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b shrink-0">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ChevronLeft className="h-5 w-5" />
@@ -400,14 +407,17 @@ export default function Editor({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 p-6 bg-background">
-        <div className="max-w-4xl mx-auto">
-          <div className="space-y-2">
-            {blocks.map((block, index) => (
-              <div key={block.id} className="group relative">
-                {renderBlock(block, index)}
-              </div>
-            ))}
+      <div className="flex-1 flex overflow-hidden">
+        <Conversation />
+        <div className="flex-1 overflow-y-auto min-h-0 p-6 bg-background">
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-2">
+              {blocks.map((block, index) => (
+                <div key={block.id} className="group relative">
+                  {renderBlock(block, index)}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -448,7 +458,7 @@ export default function Editor({
                 ))}
               </div>
               <Square className="h-4 w-4 ml-1 text-white" />
-              <span>Recording... {formatTime(recordingDuration)}</span>
+              <span>Recording...</span>
             </Button>
 
             {transcription && (

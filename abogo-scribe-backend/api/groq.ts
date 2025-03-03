@@ -18,9 +18,11 @@ export async function transcribeAudioGroq(
       file: file,
       model: "whisper-large-v3-turbo",
       language: "es",
+      response_format: "verbose_json",
+      timestamp_granularities: ["segment"],
     });
 
-    console.log("Transcription:", transcription.text);
+    console.log("Transcription:", transcription);
     return transcription.text;
   } catch (error) {
     console.error("Transcription error:", error);
