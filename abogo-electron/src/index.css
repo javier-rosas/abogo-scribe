@@ -1,41 +1,76 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 355.7 100% 97.3%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 142.1 76.2% 36.3%;
+
+    --radius: 0.75rem;
+
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-synthesis: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow-x: hidden;
+    display: flex;
+    place-items: center;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+}
+
+/* Better focus styles */
+:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.5);
+  outline-offset: 2px;
+}
+
+/* Improved text rendering */
+body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow-x: hidden;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  text-rendering: optimizeLegibility;
 }
 
 h1 {
@@ -54,23 +89,14 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  border-color: var(--primary);
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
   }
 }

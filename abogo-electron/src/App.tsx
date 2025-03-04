@@ -1,13 +1,20 @@
-import './App.css';
+import "./App.css";
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import Dashboard from './components/dashboard';
-import Editor from './components/editor';
-import { Meeting } from './types';
+import Dashboard from "./components/dashboard";
+import Editor from "./components/editor";
+import LoginPage from "./components/login";
+import { Meeting } from "./types";
 
 function App() {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+
+  const { isAuthenticated } = { isAuthenticated: false };
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden">
