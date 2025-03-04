@@ -128,20 +128,12 @@ export class AudioRecorder {
       this.mediaRecorder.ondataavailable = async (event) => {
         console.log("Got media chunk of size:", event.data.size);
         if (event.data.size > 0 && this.ws?.readyState === WebSocket.OPEN) {
-          const isAudible = this.checkAudioLevel();
-          console.log("Audio level check:", isAudible ? "audible" : "silent");
-
-          if (isAudible) {
-            try {
-              const arrayBuffer = await event.data.arrayBuffer();
-              console.log(
-                "Sending audio chunk of size:",
-                arrayBuffer.byteLength
-              );
-              this.ws.send(arrayBuffer);
-            } catch (error) {
-              console.error("Error sending audio chunk:", error);
-            }
+          try {
+            const arrayBuffer = await event.data.arrayBuffer();
+            console.log("Sending audio chunk of size:", arrayBuffer.byteLength);
+            this.ws.send(arrayBuffer);
+          } catch (error) {
+            console.error("Error sending audio chunk:", error);
           }
         }
       };

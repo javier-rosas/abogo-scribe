@@ -129,7 +129,7 @@ Bun.serve<WebSocketData, Record<string, never>>({
       // Close the Deepgram connection when the client disconnects
       const deepgramConnection = ws.data.deepgramConnection;
       if (deepgramConnection) {
-        deepgramConnection.finish();
+        deepgramConnection.requestClose();
       }
     },
   },
