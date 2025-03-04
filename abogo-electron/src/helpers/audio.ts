@@ -1,5 +1,3 @@
-import { transcribeAudio } from '../api/transcribe';
-
 // Interface for recording options
 export interface RecordingOptions {
   mimeType?: string;
@@ -21,8 +19,6 @@ const defaultOptions: RecordingOptions = {
   audioBitsPerSecond: 128000,
 };
 
-const RECORDING_INTERVAL = 5000;
-
 // Class to handle audio recording
 export class AudioRecorder {
   private stream: MediaStream | null = null;
@@ -30,24 +26,21 @@ export class AudioRecorder {
   private recordingState: RecordingState = { isRecording: false };
   private onStateChangeCallback: ((state: RecordingState) => void) | null =
     null;
-  private activeRecorders: MediaRecorder[] = [];
-  private recordingCycleInterval: any = null;
   private _onTranscriptionUpdate: ((text: string) => void) | undefined;
-  // Add new properties for audio analysis
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
-  private silenceThreshold = -50; // in dB, adjust this value based on your needs
+  private silenceThreshold = -50;
+  private ws: WebSocket | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
 
   constructor(options: RecordingOptions = {}) {
     this.options = { ...defaultOptions, ...options };
   }
 
-  // Set callback for state changes
   public onStateChange(callback: (state: RecordingState) => void): void {
     this.onStateChangeCallback = callback;
   }
 
-  // Update and notify about state changes
   private updateState(newState: Partial<RecordingState>): void {
     this.recordingState = { ...this.recordingState, ...newState };
     if (this.onStateChangeCallback) {
@@ -55,29 +48,60 @@ export class AudioRecorder {
     }
   }
 
-  // Add method to check if audio is above threshold
   private checkAudioLevel(): boolean {
     if (!this.analyser) return false;
 
     const dataArray = new Float32Array(this.analyser.frequencyBinCount);
     this.analyser.getFloatTimeDomainData(dataArray);
 
-    // Calculate RMS value
     const rms = Math.sqrt(
       dataArray.reduce((sum, value) => sum + value * value, 0) /
         dataArray.length
     );
 
-    // Convert to dB
     const db = 20 * Math.log10(rms);
     return db > this.silenceThreshold;
   }
 
-  // Start recording using 5-second cycles with a 100ms overlap
+  private setupWebSocket(): void {
+    this.ws = new WebSocket("ws://localhost:3000");
+
+    this.ws.onopen = () => {
+      console.log("WebSocket connection established");
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("Received WebSocket message:", data);
+        if (data.type === "transcript" && this._onTranscriptionUpdate) {
+          this._onTranscriptionUpdate(data.data);
+        } else if (data.type === "error") {
+          console.error("Transcription error:", data.message);
+        }
+      } catch (error) {
+        console.error("Error processing WebSocket message:", error);
+      }
+    };
+
+    this.ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    this.ws.onclose = (event) => {
+      console.log(
+        "WebSocket connection closed with code:",
+        event.code,
+        "reason:",
+        event.reason
+      );
+    };
+  }
+
   public async startRecording(): Promise<void> {
     try {
-      // Request microphone access
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("Got audio stream");
 
       // Setup audio analysis
       this.audioContext = new AudioContext();
@@ -85,87 +109,47 @@ export class AudioRecorder {
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
       source.connect(this.analyser);
+      console.log("Audio analysis setup complete");
 
-      // Check for supported MIME types
+      // Setup WebSocket connection
+      this.setupWebSocket();
+
+      // Setup MediaRecorder for streaming
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
-
       console.log("Using MIME type:", mimeType);
 
-      // Clear any existing cycle if any
-      if (this.recordingCycleInterval) {
-        clearInterval(this.recordingCycleInterval);
-      }
+      this.mediaRecorder = new MediaRecorder(this.stream, {
+        mimeType,
+        audioBitsPerSecond: this.options.audioBitsPerSecond,
+      });
 
-      // Immediately start a recorder so that transcribeAudio is called right away
-      if (this.stream) {
-        const streamClone = this.stream.clone();
-        const immediateRecorder = new MediaRecorder(streamClone, {
-          mimeType,
-          audioBitsPerSecond: this.options.audioBitsPerSecond,
-        });
+      this.mediaRecorder.ondataavailable = async (event) => {
+        console.log("Got media chunk of size:", event.data.size);
+        if (event.data.size > 0 && this.ws?.readyState === WebSocket.OPEN) {
+          const isAudible = this.checkAudioLevel();
+          console.log("Audio level check:", isAudible ? "audible" : "silent");
 
-        immediateRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0 && this.checkAudioLevel()) {
+          if (isAudible) {
             try {
-              const transcription = await transcribeAudio(event.data);
-              if (this._onTranscriptionUpdate) {
-                this._onTranscriptionUpdate(transcription);
-              }
+              const arrayBuffer = await event.data.arrayBuffer();
+              console.log(
+                "Sending audio chunk of size:",
+                arrayBuffer.byteLength
+              );
+              this.ws.send(arrayBuffer);
             } catch (error) {
-              console.error("Error processing audio chunk:", error);
+              console.error("Error sending audio chunk:", error);
             }
           }
-        };
+        }
+      };
 
-        immediateRecorder.start();
-        this.activeRecorders.push(immediateRecorder);
+      // Start recording with a small timeslice to get frequent updates
+      this.mediaRecorder.start(500); // Increased to 500ms to reduce overhead
+      console.log("MediaRecorder started");
 
-        // Stop this recorder after 5 seconds
-        setTimeout(() => {
-          if (immediateRecorder.state !== "inactive") {
-            immediateRecorder.stop();
-          }
-        }, RECORDING_INTERVAL);
-      }
-
-      // Start a cycle: start a new recorder every 4900ms (for 5-second recordings with ~100ms overlap)
-      this.recordingCycleInterval = setInterval(() => {
-        if (!this.stream) return;
-
-        // Clone stream so each recorder works independently
-        const streamClone = this.stream.clone();
-        const recorder = new MediaRecorder(streamClone, {
-          mimeType,
-          audioBitsPerSecond: this.options.audioBitsPerSecond,
-        });
-
-        recorder.ondataavailable = async (event) => {
-          if (event.data.size > 0 && this.checkAudioLevel()) {
-            try {
-              const transcription = await transcribeAudio(event.data);
-              if (this._onTranscriptionUpdate) {
-                this._onTranscriptionUpdate(transcription);
-              }
-            } catch (error) {
-              console.error("Error processing audio chunk:", error);
-            }
-          }
-        };
-
-        recorder.start();
-        this.activeRecorders.push(recorder);
-
-        // Stop this recorder after 5 seconds
-        setTimeout(() => {
-          if (recorder.state !== "inactive") {
-            recorder.stop();
-          }
-        }, RECORDING_INTERVAL);
-      }, RECORDING_INTERVAL - 100);
-
-      // Update state
       this.updateState({
         isRecording: true,
         startTime: new Date(),
@@ -179,29 +163,30 @@ export class AudioRecorder {
     }
   }
 
-  // Stop recording and clear the cycle
   public stopRecording(): void {
-    if (this.recordingCycleInterval) {
-      clearInterval(this.recordingCycleInterval);
-      this.recordingCycleInterval = null;
+    console.log("Stopping recording...");
+    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+      this.mediaRecorder.stop();
+      console.log("MediaRecorder stopped");
     }
 
-    // Stop all active recorders
-    this.activeRecorders.forEach((recorder) => {
-      if (recorder.state !== "inactive") {
-        recorder.stop();
-      }
-    });
-    this.activeRecorders = [];
-
-    // Stop all tracks
     if (this.stream) {
-      this.stream.getTracks().forEach((track) => track.stop());
+      this.stream.getTracks().forEach((track) => {
+        track.stop();
+        console.log("Audio track stopped");
+      });
       this.stream = null;
+    }
+
+    if (this.ws) {
+      this.ws.close();
+      console.log("WebSocket connection closed");
+      this.ws = null;
     }
 
     if (this.audioContext) {
       this.audioContext.close();
+      console.log("AudioContext closed");
       this.audioContext = null;
     }
     this.analyser = null;
@@ -211,12 +196,10 @@ export class AudioRecorder {
     });
   }
 
-  // Get current recording state
   public getState(): RecordingState {
     return this.recordingState;
   }
 
-  // Save recording to file using Electron's IPC
   public async saveRecording(filename?: string): Promise<string | null> {
     if (!this.recordingState.audioBlob) {
       console.error("No recording to save");
@@ -224,10 +207,8 @@ export class AudioRecorder {
     }
 
     try {
-      // Convert blob to array buffer
       const arrayBuffer = await this.recordingState.audioBlob.arrayBuffer();
 
-      // Use window.electron if it exists (should be provided by preload.js)
       if (window.electron) {
         const defaultFilename = `recording-${new Date()
           .toISOString()
@@ -247,7 +228,6 @@ export class AudioRecorder {
     }
   }
 
-  // Add this method to set the transcription callback
   public set onTranscriptionUpdate(
     callback: ((text: string) => void) | undefined
   ) {
@@ -255,10 +235,8 @@ export class AudioRecorder {
   }
 }
 
-// Create and export a singleton instance
 export const audioRecorder = new AudioRecorder();
 
-// Type declaration for Electron API
 declare global {
   interface Window {
     electron?: {
