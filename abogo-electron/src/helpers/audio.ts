@@ -64,7 +64,7 @@ export class AudioRecorder {
   }
 
   private setupWebSocket(): void {
-    this.ws = new WebSocket("ws://localhost:3000");
+    this.ws = new WebSocket("ws://localhost:3001");
 
     this.ws.onopen = () => {
       console.log("WebSocket connection established");

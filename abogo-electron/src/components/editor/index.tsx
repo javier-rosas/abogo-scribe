@@ -329,6 +329,19 @@ export default function Editor({
 
   // Add this new component within the Editor
   const Conversation = () => {
+    const conversationEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      conversationEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [transcriptionHistory, transcription]);
+
+    const lastHistoryEntry =
+      transcriptionHistory[transcriptionHistory.length - 1];
+    const shouldShowLiveTranscription =
+      isRecording &&
+      transcription &&
+      (!lastHistoryEntry || lastHistoryEntry.text !== transcription);
+
     return (
       <div className="w-80 border-r bg-muted/10 overflow-y-auto flex flex-col">
         <div className="p-4 border-b">
@@ -348,14 +361,30 @@ export default function Editor({
               </div>
             </div>
           ))}
-          {isRecording && transcription && (
+          {shouldShowLiveTranscription && (
             <div className="flex flex-col space-y-1">
               <div className="text-xs text-muted-foreground">Live</div>
-              <div className="bg-background rounded-lg p-3 shadow-sm border-primary/20 border animate-pulse">
+              <div className="bg-background rounded-lg p-3 shadow-sm border-primary/20 border">
                 {transcription}
+                <span className="inline-flex ml-1">
+                  <span className="animate-pulse">.</span>
+                  <span
+                    className="animate-pulse"
+                    style={{ animationDelay: "0.3s" }}
+                  >
+                    .
+                  </span>
+                  <span
+                    className="animate-pulse"
+                    style={{ animationDelay: "0.6s" }}
+                  >
+                    .
+                  </span>
+                </span>
               </div>
             </div>
           )}
+          <div ref={conversationEndRef} />
         </div>
       </div>
     );

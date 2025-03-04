@@ -31,3 +31,31 @@ export async function transcribeAudioOpenAI(
     throw error;
   }
 }
+
+export async function processTranscriptions(
+  transcriptions: string[]
+): Promise<string> {
+  try {
+    const prompt = `Estos son ${
+      transcriptions.length
+    } pedazos de una conversación, por favor corrige errores ortográficos y genera una oración o párrafo coherente:\n\n${transcriptions.join(
+      "\n"
+    )}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+    });
+
+    return completion.choices[0].message.content || "";
+  } catch (error) {
+    console.error("Error processing transcriptions:", error);
+    throw error;
+  }
+}
