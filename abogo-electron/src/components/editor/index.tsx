@@ -46,7 +46,7 @@ export default function Editor({
     });
   }, []);
 
-  // Replace the streaming transcription useEffect with this new one
+  // Replace the streaming transcription useEffect with this simplified version
   useEffect(() => {
     audioRecorder.onTranscriptionUpdate = (text: string) => {
       const filteredText = text.trim();
@@ -61,27 +61,6 @@ export default function Editor({
             timestamp: Date.now(),
           },
         ]);
-
-        // Add transcription to the editor
-        if (activeBlock) {
-          const activeBlockIndex = blocks.findIndex(
-            (block) => block.id === activeBlock
-          );
-          if (activeBlockIndex >= 0) {
-            const newBlocks = [...blocks];
-            const currentContent = newBlocks[activeBlockIndex].content;
-
-            // Append transcription to the current block
-            newBlocks[activeBlockIndex] = {
-              ...newBlocks[activeBlockIndex],
-              content: currentContent
-                ? `${currentContent} ${filteredText}`
-                : filteredText,
-            };
-
-            setBlocks(newBlocks);
-          }
-        }
       }
     };
 
@@ -89,7 +68,7 @@ export default function Editor({
       // Clean up
       audioRecorder.onTranscriptionUpdate = undefined;
     };
-  }, [blocks, activeBlock]);
+  }, []); // Note: removed dependencies since we're not using blocks or activeBlock anymore
 
   // Gets the current caret (cursor) position within a given HTML element
   const getCaretPosition = (element: HTMLElement): number => {

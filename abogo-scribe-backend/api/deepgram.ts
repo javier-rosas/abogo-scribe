@@ -6,16 +6,16 @@ const deepgram = createClient(
 
 export async function transcribeAudioDeepgram(
   audioBuffer: Buffer
-): Promise<{ [speaker: string]: string }> {
+): Promise<string> {
   try {
     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
       audioBuffer,
       {
-        model: "general",
-        tier: "enhanced",
-        language: "es-419",
+        model: "general", // General model is required for Enhanced tier
+        tier: "enhanced", // Use the Enhanced tier for better accuracy
+        language: "es-419", // Latin American Spanish
         punctuate: true,
-        diarize: true,
+        // diarize: true, // Enable speaker identification
       }
     );
 
@@ -23,28 +23,45 @@ export async function transcribeAudioDeepgram(
       throw error;
     }
 
-    const words = result?.results?.channels[0]?.alternatives[0]?.words || [];
-    if (words.length === 0) {
-      console.log("No transcription available.");
-      return {};
-    }
-
-    // Create an object to store each speaker's text
-    const speakerTexts: { [speaker: string]: string } = {};
-
-    // Group words by speaker
-    for (const word of words) {
-      const speaker = `speaker_${word.speaker}`;
-      if (!speakerTexts[speaker]) {
-        speakerTexts[speaker] = "";
-      }
-      speakerTexts[speaker] += word.word + " ";
-    }
-
-    console.log(speakerTexts);
-    return speakerTexts;
+    const transcription =
+      result?.results?.channels[0]?.alternatives[0]?.transcript || "";
+    console.log("Transcription:", transcription);
+    return transcription;
   } catch (error) {
     console.error("Transcription error:", error);
     throw error;
   }
 }
+
+// import { createClient } from '@deepgram/sdk';
+
+// const deepgram = createClient(
+//   process.env.DEEPGRAM_API_KEY || Bun.env.DEEPGRAM_API_KEY || ""
+// );
+
+// export async function transcribeAudioDeepgram(
+//   audioBuffer: Buffer
+// ): Promise<string> {
+//   try {
+//     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+//       audioBuffer,
+//       {
+//         model: "nova-3", // Use Nova-3 for enhanced accuracy
+//         // language: "es", // Use "es" for general Spanish or "es-419" for Latin American Spanish
+//         punctuate: true,
+//       }
+//     );
+
+//     if (error) {
+//       throw error;
+//     }
+
+//     const transcription =
+//       result?.results?.channels[0]?.alternatives[0]?.transcript || "";
+//     console.log("Transcription:", transcription);
+//     return transcription;
+//   } catch (error) {
+//     console.error("Transcription error:", error);
+//     throw error;
+//   }
+// }

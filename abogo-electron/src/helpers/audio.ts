@@ -33,6 +33,10 @@ export class AudioRecorder {
   private activeRecorders: MediaRecorder[] = [];
   private recordingCycleInterval: any = null;
   private _onTranscriptionUpdate: ((text: string) => void) | undefined;
+  // Add new properties for audio analysis
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private silenceThreshold = -50; // in dB, adjust this value based on your needs
 
   constructor(options: RecordingOptions = {}) {
     this.options = { ...defaultOptions, ...options };
@@ -51,11 +55,36 @@ export class AudioRecorder {
     }
   }
 
+  // Add method to check if audio is above threshold
+  private checkAudioLevel(): boolean {
+    if (!this.analyser) return false;
+
+    const dataArray = new Float32Array(this.analyser.frequencyBinCount);
+    this.analyser.getFloatTimeDomainData(dataArray);
+
+    // Calculate RMS value
+    const rms = Math.sqrt(
+      dataArray.reduce((sum, value) => sum + value * value, 0) /
+        dataArray.length
+    );
+
+    // Convert to dB
+    const db = 20 * Math.log10(rms);
+    return db > this.silenceThreshold;
+  }
+
   // Start recording using 5-second cycles with a 100ms overlap
   public async startRecording(): Promise<void> {
     try {
       // Request microphone access
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Setup audio analysis
+      this.audioContext = new AudioContext();
+      const source = this.audioContext.createMediaStreamSource(this.stream);
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 2048;
+      source.connect(this.analyser);
 
       // Check for supported MIME types
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -78,7 +107,7 @@ export class AudioRecorder {
         });
 
         immediateRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0) {
+          if (event.data.size > 0 && this.checkAudioLevel()) {
             try {
               const transcription = await transcribeAudio(event.data);
               if (this._onTranscriptionUpdate) {
@@ -113,7 +142,7 @@ export class AudioRecorder {
         });
 
         recorder.ondataavailable = async (event) => {
-          if (event.data.size > 0) {
+          if (event.data.size > 0 && this.checkAudioLevel()) {
             try {
               const transcription = await transcribeAudio(event.data);
               if (this._onTranscriptionUpdate) {
@@ -170,6 +199,12 @@ export class AudioRecorder {
       this.stream.getTracks().forEach((track) => track.stop());
       this.stream = null;
     }
+
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+    this.analyser = null;
 
     this.updateState({
       isRecording: false,
