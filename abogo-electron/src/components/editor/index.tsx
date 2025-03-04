@@ -356,7 +356,7 @@ export default function Editor({
           <h2 className="font-semibold">Transcription</h2>
         </div>
         <div className="flex-1 p-4 space-y-4">
-          {transcriptionHistory.map((entry, index) => (
+          {transcriptionHistory.map((entry) => (
             <div
               key={entry.timestamp}
               className="flex flex-col space-y-1 animate-fade-in"
