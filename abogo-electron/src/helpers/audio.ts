@@ -1,4 +1,4 @@
-import { transcribeAudio } from '../api/transcribe';
+import { transcribeAudio } from "../api/transcribe";
 
 // Interface for recording options
 export interface RecordingOptions {
@@ -21,7 +21,7 @@ const defaultOptions: RecordingOptions = {
   audioBitsPerSecond: 128000,
 };
 
-const RECORDING_INTERVAL = 5000;
+const RECORDING_INTERVAL = 30000; // 30 seconds
 
 // Class to handle audio recording
 export class AudioRecorder {

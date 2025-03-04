@@ -1,11 +1,20 @@
-import { CheckSquare, ChevronLeft, Mic, MoreHorizontal, Save, Square } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import {
+  CheckSquare,
+  ChevronLeft,
+  Mic,
+  MoreHorizontal,
+  Save,
+  Square,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button';
-import { audioRecorder } from '@/helpers/audio';
-import { cn } from '@/lib/utils';
-import { Meeting } from '@/types';
+import { Button } from "@/components/ui/button";
+import { audioRecorder } from "@/helpers/audio";
+import { cn } from "@/lib/utils";
+import { Meeting } from "@/types";
+
+import Conversation from "../conversation";
 
 interface TranscriptionEntry {
   text: string;
@@ -327,40 +336,6 @@ export default function Editor({
     }
   };
 
-  // Add this new component within the Editor
-  const Conversation = () => {
-    return (
-      <div className="w-80 border-r bg-muted/10 overflow-y-auto flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="font-semibold">Transcription</h2>
-        </div>
-        <div className="flex-1 p-4 space-y-4">
-          {transcriptionHistory.map((entry) => (
-            <div
-              key={entry.timestamp}
-              className="flex flex-col space-y-1 animate-fade-in"
-            >
-              <div className="text-xs text-muted-foreground">
-                {new Date(entry.timestamp).toLocaleTimeString()}
-              </div>
-              <div className="bg-background rounded-lg p-3 shadow-sm">
-                {entry.text}
-              </div>
-            </div>
-          ))}
-          {isRecording && transcription && (
-            <div className="flex flex-col space-y-1">
-              <div className="text-xs text-muted-foreground">Live</div>
-              <div className="bg-background rounded-lg p-3 shadow-sm border-primary/20 border animate-pulse">
-                {transcription}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="h-full w-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b shrink-0">
@@ -387,7 +362,11 @@ export default function Editor({
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <Conversation />
+        <Conversation
+          transcriptionHistory={transcriptionHistory}
+          transcription={transcription}
+          isRecording={isRecording}
+        />{" "}
         <div className="flex-1 overflow-y-auto min-h-0 p-6 bg-background">
           <div className="max-w-4xl mx-auto">
             <div className="space-y-2">
