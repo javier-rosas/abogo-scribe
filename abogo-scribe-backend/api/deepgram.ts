@@ -11,7 +11,7 @@ export async function transcribeAudioDeepgram(
     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
       audioBuffer,
       {
-        model: "nova-3", // General model is required for Enhanced tier
+        model: "general", // General model is required for Enhanced tier
         tier: "enhanced", // Use the Enhanced tier for better accuracy
         language: "es-419", // Latin American Spanish
         punctuate: true,

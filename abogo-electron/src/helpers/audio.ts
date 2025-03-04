@@ -107,7 +107,10 @@ export class AudioRecorder {
         });
 
         immediateRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0 && this.checkAudioLevel()) {
+          if (
+            event.data.size > 0 &&
+            (this.checkAudioLevel() || immediateRecorder.state === "inactive")
+          ) {
             try {
               const transcription = await transcribeAudio(event.data);
               if (this._onTranscriptionUpdate) {
@@ -142,7 +145,10 @@ export class AudioRecorder {
         });
 
         recorder.ondataavailable = async (event) => {
-          if (event.data.size > 0 && this.checkAudioLevel()) {
+          if (
+            event.data.size > 0 &&
+            (this.checkAudioLevel() || recorder.state === "inactive")
+          ) {
             try {
               const transcription = await transcribeAudio(event.data);
               if (this._onTranscriptionUpdate) {
