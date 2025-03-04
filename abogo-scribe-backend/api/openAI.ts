@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || Bun.env.OPENAI_API_KEY,
@@ -36,9 +36,9 @@ export async function processTranscriptions(
   transcriptions: string[]
 ): Promise<string> {
   try {
-    const prompt = `Estos son ${
+    const prompt = `Actúa como un corrector ortográfico. Toma estos ${
       transcriptions.length
-    } pedazos de una conversación, por favor corrige errores ortográficos y genera una oración o párrafo coherente:\n\n${transcriptions.join(
+    } fragmentos de texto y devuelve ÚNICAMENTE el texto con la gramática corregida, manteniendo el mismo contenido y significado, sin explicaciones ni comentarios adicionales:\n\n${transcriptions.join(
       "\n"
     )}`;
 
