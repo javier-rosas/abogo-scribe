@@ -16,10 +16,10 @@ import { Meeting } from "@/types";
 
 import Conversation from "../conversation";
 
-interface TranscriptionEntry {
+type TranscriptionEntry = {
   text: string;
   timestamp: number;
-}
+};
 
 export default function Editor({
   meeting,
