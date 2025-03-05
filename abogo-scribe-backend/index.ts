@@ -87,9 +87,11 @@ app.post("/transcribe", authenticateJWT, async (req: any, res: any) => {
 // Add this new endpoint before app.listen()
 app.get("/auth/google/callback", async (req, res) => {
   const { code } = req.query;
+  console.log("Received OAuth callback with code:", code);
 
   try {
     // Exchange the authorization code for tokens
+    console.log("Attempting to exchange code for tokens...");
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
       {
@@ -100,14 +102,17 @@ app.get("/auth/google/callback", async (req, res) => {
         grant_type: "authorization_code",
       }
     );
+    console.log("Successfully received token response");
 
     // Get user info using the access token
+    console.log("Fetching user info...");
     const userInfo = await axios.get(
       "https://www.googleapis.com/oauth2/v3/userinfo",
       {
         headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` },
       }
     );
+    console.log("Successfully received user info:", userInfo.data.email);
 
     const { email, name, picture, sub } = userInfo.data;
 
@@ -117,6 +122,7 @@ app.get("/auth/google/callback", async (req, res) => {
       JWT_SECRET,
       { expiresIn: "7d" }
     );
+    console.log("Generated JWT for user:", email);
 
     // Close the popup and send data to the main window
     res.send(`
@@ -125,7 +131,7 @@ app.get("/auth/google/callback", async (req, res) => {
           type: 'AUTH_SUCCESS',
           jwt: '${userToken}',
           user: ${JSON.stringify({ email, name, picture })}
-        }, 'http://localhost:5173');
+        }, '*');  // Use * to allow any origin temporarily for debugging
         window.close();
       </script>
     `);
@@ -136,7 +142,7 @@ app.get("/auth/google/callback", async (req, res) => {
         window.opener.postMessage({ 
           type: 'AUTH_ERROR',
           error: 'Authentication failed'
-        }, 'http://localhost:5173');
+        }, '*');  // Use * to allow any origin temporarily for debugging
         window.close();
       </script>
     `);

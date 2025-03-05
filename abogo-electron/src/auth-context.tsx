@@ -49,9 +49,22 @@ export function AuthProvider({ children }: any) {
   useEffect(() => {
     // Add message listener for OAuth popup
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== "http://localhost:5173") return;
+      console.log("Received message event:", event.origin, event.data);
+
+      // Accept messages from both development server and backend
+      if (
+        event.origin !== "http://localhost:5173" &&
+        event.origin !== "http://localhost:3000"
+      ) {
+        console.log(
+          "Origin mismatch - expected http://localhost:5173 or http://localhost:3000, got:",
+          event.origin
+        );
+        return;
+      }
 
       if (event.data.type === "AUTH_SUCCESS") {
+        console.log("Auth success - received JWT and user data");
         localStorage.setItem("jwt", event.data.jwt);
         setJwt(event.data.jwt);
       } else if (event.data.type === "AUTH_ERROR") {
@@ -64,6 +77,7 @@ export function AuthProvider({ children }: any) {
   }, []);
 
   async function handleGoogleSignIn() {
+    console.log("Initiating Google Sign In...");
     const GOOGLE_CLIENT_ID =
       "937215743557-d7j44tgj2hh0ilsfrugveg3bnpvvkchu.apps.googleusercontent.com";
     const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";

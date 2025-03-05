@@ -16,6 +16,7 @@ function createWindow() {
 
   // Add these security-related settings
   win.webContents.setWindowOpenHandler(({ url }) => {
+    console.log("Window open requested for URL:", url);
     // Allow Google OAuth popup, callback, and WebAuthn/passkey URLs
     if (
       url.startsWith("https://accounts.google.com") ||
@@ -24,14 +25,18 @@ function createWindow() {
       url.startsWith("webauthn://") ||
       url.startsWith("http://localhost:5173")
     ) {
+      console.log("Allowing window open for:", url);
       return { action: "allow" };
     }
+    console.log("Denying window open for:", url);
     return { action: "deny" };
   });
 
   // Add event listener for navigation
   win.webContents.on("will-navigate", (event, url) => {
+    console.log("Navigation requested to:", url);
     if (url.includes("/auth/google/callback")) {
+      console.log("Intercepting OAuth callback URL");
       // Prevent the default navigation
       event.preventDefault();
       // Load the main application URL
