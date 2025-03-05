@@ -1,11 +1,4 @@
-import {
-  CheckSquare,
-  ChevronLeft,
-  Mic,
-  MoreHorizontal,
-  Save,
-  Square,
-} from "lucide-react";
+import { CheckSquare, ChevronLeft, Mic, Save, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -342,7 +335,7 @@ export default function Editor({
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mr-28">
           <Button variant="outline" size="sm">
             Share
           </Button>
@@ -355,9 +348,6 @@ export default function Editor({
               Save Recording
             </Button>
           )}
-          <Button variant="outline" size="icon">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
