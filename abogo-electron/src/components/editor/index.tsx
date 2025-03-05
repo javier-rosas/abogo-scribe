@@ -1,13 +1,14 @@
-import { CheckSquare, ChevronLeft, Mic, Save, Square } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { CheckSquare, ChevronLeft, Mic, Save, Square } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
-import { audioRecorder } from "@/helpers/audio";
-import { cn } from "@/lib/utils";
-import { Meeting } from "@/types";
+import { Button } from '@/components/ui/button';
+import { LogoutButton } from '@/components/ui/logout-button';
+import { audioRecorder } from '@/helpers/audio';
+import { cn } from '@/lib/utils';
+import { Meeting } from '@/types';
 
-import Conversation from "../conversation";
+import Conversation from '../conversation';
 
 interface TranscriptionEntry {
   text: string;
@@ -335,7 +336,7 @@ export default function Editor({
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <div className="flex items-center gap-2 mr-28">
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
             Share
           </Button>
@@ -348,6 +349,7 @@ export default function Editor({
               Save Recording
             </Button>
           )}
+          <LogoutButton />
         </div>
       </div>
 

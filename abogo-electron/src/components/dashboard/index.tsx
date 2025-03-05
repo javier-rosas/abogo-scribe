@@ -1,5 +1,6 @@
 import { Meeting } from '@/types';
 
+import { LogoutButton } from '../ui/logout-button';
 import { MeetingList } from './meeting-list';
 
 export default function Dashboard({
@@ -9,6 +10,9 @@ export default function Dashboard({
 }) {
   return (
     <div className="min-h-screen bg-background">
+      <div className="absolute top-4 right-4 z-50">
+        <LogoutButton />
+      </div>
       <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6">
         <header className="mb-10 text-center">
           <h1 className="text-3xl font-medium tracking-tight mb-2">Calendar</h1>
