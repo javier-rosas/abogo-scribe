@@ -118,12 +118,9 @@ app.get("/auth/status", (req: any, res: any) => {
 // Modify your auth/google/callback endpoint to handle the protocol redirect
 app.get("/auth/google/callback", async (req: any, res: any) => {
   const { code, state } = req.query;
-  console.log("Received OAuth callback with code:", code);
-  console.log("State parameter:", state);
 
   try {
     // Exchange the authorization code for tokens
-    console.log("Attempting to exchange code for tokens...");
     const tokenResponse = await axios.post(
       "https://oauth2.googleapis.com/token",
       {
@@ -134,17 +131,14 @@ app.get("/auth/google/callback", async (req: any, res: any) => {
         grant_type: "authorization_code",
       }
     );
-    console.log("Successfully received token response");
 
     // Get user info using the access token
-    console.log("Fetching user info...");
     const userInfo = await axios.get(
       "https://www.googleapis.com/oauth2/v3/userinfo",
       {
         headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` },
       }
     );
-    console.log("Successfully received user info:", userInfo.data.email);
 
     const { email, name, picture, sub } = userInfo.data;
 
@@ -154,7 +148,6 @@ app.get("/auth/google/callback", async (req: any, res: any) => {
       JWT_SECRET,
       { expiresIn: "7d" }
     );
-    console.log("Generated JWT for user:", email);
 
     // Store auth info in cookies (keep this for compatibility)
     res.cookie(
@@ -173,11 +166,6 @@ app.get("/auth/google/callback", async (req: any, res: any) => {
     // Check if we should use the custom protocol
     if (state === "use-protocol-abogo") {
       // First redirect to our custom protocol with the token
-      console.log("Redirecting to custom protocol with token");
-
-      // Instead of just redirecting, serve an HTML page that:
-      // 1. Tries to redirect to the custom protocol
-      // 2. Shows a nice message if the redirect doesn't close the window
       return res.send(`
         <!DOCTYPE html>
         <html>
@@ -319,7 +307,6 @@ app.get("/auth/google/callback", async (req: any, res: any) => {
       </html>
     `);
   } catch (error) {
-    console.error("OAuth error:", error);
     res.send(`
       <script>
         window.opener.postMessage({ 
@@ -343,8 +330,6 @@ app.get("/auth/local-bridge", (req, res) => {
       <body>
         <script>
           // This page helps bridge localStorage between browser and Electron
-          console.log("Auth bridge initialized");
-          // We don't need to do anything active - the parent window will read our localStorage
         </script>
       </body>
     </html>
