@@ -10,7 +10,33 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      webAuthn: true, // Enable WebAuthn for passkey support
     },
+  });
+
+  // Add these security-related settings
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    // Allow Google OAuth popup, callback, and WebAuthn/passkey URLs
+    if (
+      url.startsWith("https://accounts.google.com") ||
+      url.startsWith("http://localhost:3000/auth/google") ||
+      url.startsWith("http://localhost:3000/auth/google/callback") ||
+      url.startsWith("webauthn://") ||
+      url.startsWith("http://localhost:5173")
+    ) {
+      return { action: "allow" };
+    }
+    return { action: "deny" };
+  });
+
+  // Add event listener for navigation
+  win.webContents.on("will-navigate", (event, url) => {
+    if (url.includes("/auth/google/callback")) {
+      // Prevent the default navigation
+      event.preventDefault();
+      // Load the main application URL
+      win.loadURL("http://localhost:5173");
+    }
   });
 
   win.loadURL("http://localhost:5173"); // Vite's default port

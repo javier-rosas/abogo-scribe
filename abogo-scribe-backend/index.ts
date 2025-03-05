@@ -84,6 +84,65 @@ app.post("/transcribe", authenticateJWT, async (req: any, res: any) => {
   }
 });
 
+// Add this new endpoint before app.listen()
+app.get("/auth/google/callback", async (req, res) => {
+  const { code } = req.query;
+
+  try {
+    // Exchange the authorization code for tokens
+    const tokenResponse = await axios.post(
+      "https://oauth2.googleapis.com/token",
+      {
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: "http://localhost:3000/auth/google/callback",
+        grant_type: "authorization_code",
+      }
+    );
+
+    // Get user info using the access token
+    const userInfo = await axios.get(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` },
+      }
+    );
+
+    const { email, name, picture, sub } = userInfo.data;
+
+    // Generate our JWT
+    const userToken = jwt.sign(
+      { email, name, picture, googleId: sub },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Close the popup and send data to the main window
+    res.send(`
+      <script>
+        window.opener.postMessage({ 
+          type: 'AUTH_SUCCESS',
+          jwt: '${userToken}',
+          user: ${JSON.stringify({ email, name, picture })}
+        }, 'http://localhost:5173');
+        window.close();
+      </script>
+    `);
+  } catch (error) {
+    console.error("OAuth error:", error);
+    res.send(`
+      <script>
+        window.opener.postMessage({ 
+          type: 'AUTH_ERROR',
+          error: 'Authentication failed'
+        }, 'http://localhost:5173');
+        window.close();
+      </script>
+    `);
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`HTTP server is running on http://localhost:${PORT}`);
 });

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
+import { useAuth } from "@/auth-context";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -12,10 +13,7 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
-  async function handleGoogleSignIn() {
-    // This would be replaced with your actual Google authentication logic
-    console.log("Signing in with Google");
-  }
+  const { handleGoogleSignIn } = useAuth();
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#F7F6F3] p-4">

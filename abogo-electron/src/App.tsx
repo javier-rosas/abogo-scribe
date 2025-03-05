@@ -2,6 +2,7 @@ import "./App.css";
 
 import { useState } from "react";
 
+import { AuthProvider, useAuth } from "./auth-context";
 import Dashboard from "./components/dashboard";
 import Editor from "./components/editor";
 import LoginPage from "./components/login";
@@ -10,9 +11,9 @@ import { Meeting } from "./types";
 function App() {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
 
-  const { isAuthenticated } = { isAuthenticated: false };
+  const { user } = useAuth();
 
-  if (!isAuthenticated) {
+  if (!user) {
     return <LoginPage />;
   }
 
@@ -30,4 +31,10 @@ function App() {
   );
 }
 
-export default App;
+export default function Root() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}
