@@ -1,13 +1,13 @@
-import "./App.css";
+import './App.css';
 
-import { useState } from "react";
+import { useState } from 'react';
 
-import { AuthProvider, useAuth } from "./auth-context";
-import Dashboard from "./components/dashboard";
-import Editor from "./components/editor";
-import LoginPage from "./components/login";
-import { LogoutButton } from "./components/ui/logout-button";
-import { Meeting } from "./types";
+import { AuthProvider, useAuth } from './auth-context';
+import Dashboard from './components/dashboard';
+import Editor from './components/editor';
+import LoginPage from './components/login';
+import { LogoutButton } from './components/ui/logout-button';
+import { Meeting } from './types';
 
 function App() {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
@@ -17,6 +17,8 @@ function App() {
   if (!user) {
     return <LoginPage />;
   }
+
+  console.log("User:", user);
 
   return (
     <div className="h-screen w-screen overflow-hidden">

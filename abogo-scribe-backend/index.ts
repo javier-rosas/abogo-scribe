@@ -1,12 +1,13 @@
-import axios from "axios";
-import cors from "cors";
-import express from "express";
-import jwt from "jsonwebtoken";
+import axios from 'axios';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import express from 'express';
+import jwt from 'jsonwebtoken';
 
 // import { transcribeAudioOpenAI } from './api/openAI';
 // import { transcribeAudioElevenLabs } from './api/elevenLabs';
 // import { transcribeAudioGroq } from './api/groq';
-import { transcribeAudioDeepgram } from "./api/deepgram";
+import { transcribeAudioDeepgram } from './api/deepgram';
 
 // Environment Variables
 const PORT = process.env.PORT || 3000;
@@ -25,7 +26,13 @@ if (!GOOGLE_CLIENT_ID) {
 // Initialize Express App
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+  })
+);
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.raw({ type: "audio/webm", limit: "50mb" }));
 
@@ -85,9 +92,34 @@ app.post("/transcribe", authenticateJWT, async (req: any, res: any) => {
 });
 
 // Add this new endpoint before app.listen()
-app.get("/auth/google/callback", async (req, res) => {
-  const { code } = req.query;
+app.get("/auth/status", (req: any, res: any) => {
+  // Check for auth token in cookies or session
+  const pendingAuth = req.cookies?.pendingAuth || req.session?.pendingAuth;
+
+  if (pendingAuth) {
+    // Clear the pending auth
+    if (req.cookies?.pendingAuth) {
+      res.clearCookie("pendingAuth");
+    }
+    if (req.session?.pendingAuth) {
+      req.session.pendingAuth = null;
+    }
+
+    return res.json({
+      authenticated: true,
+      jwt: pendingAuth.jwt,
+      user: pendingAuth.user,
+    });
+  }
+
+  return res.json({ authenticated: false });
+});
+
+// Modify your auth/google/callback endpoint to handle the protocol redirect
+app.get("/auth/google/callback", async (req: any, res: any) => {
+  const { code, state } = req.query;
   console.log("Received OAuth callback with code:", code);
+  console.log("State parameter:", state);
 
   try {
     // Exchange the authorization code for tokens
@@ -124,16 +156,167 @@ app.get("/auth/google/callback", async (req, res) => {
     );
     console.log("Generated JWT for user:", email);
 
-    // Close the popup and send data to the main window
+    // Store auth info in cookies (keep this for compatibility)
+    res.cookie(
+      "pendingAuth",
+      JSON.stringify({
+        type: "AUTH_SUCCESS",
+        jwt: userToken,
+        user: { email, name, picture },
+      }),
+      {
+        httpOnly: false,
+        maxAge: 5 * 60 * 1000, // 5 minutes
+      }
+    );
+
+    // Check if we should use the custom protocol
+    if (state === "use-protocol-abogo") {
+      // First redirect to our custom protocol with the token
+      console.log("Redirecting to custom protocol with token");
+
+      // Instead of just redirecting, serve an HTML page that:
+      // 1. Tries to redirect to the custom protocol
+      // 2. Shows a nice message if the redirect doesn't close the window
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Successfully Logged In!</title>
+            <style>
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: #f8f9fa;
+                color: #212529;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                text-align: center;
+              }
+              .container {
+                background-color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 40px;
+                max-width: 500px;
+              }
+              .success-icon {
+                color: #28a745;
+                font-size: 48px;
+                margin-bottom: 20px;
+              }
+              h1 {
+                color: #212529;
+                margin-bottom: 16px;
+              }
+              p {
+                color: #6c757d;
+                margin-bottom: 24px;
+                line-height: 1.5;
+              }
+              .app-name {
+                font-weight: bold;
+                color: #007bff;
+              }
+              .close-button {
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 10px 20px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: background-color 0.2s;
+              }
+              .close-button:hover {
+                background-color: #0069d9;
+              }
+              .countdown {
+                margin-top: 16px;
+                font-size: 14px;
+                color: #6c757d;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="success-icon">✓</div>
+              <h1>Successfully Logged In!</h1>
+              <p>You've been successfully authenticated with <span class="app-name">Grabalo</span>.</p>
+              <p>You can now close this window and return to the app.</p>
+              <button class="close-button" onclick="window.close()">Close This Window</button>
+              <div class="countdown" id="countdown">This window will close automatically in 5 seconds...</div>
+            </div>
+            
+            <script>
+              // Try to redirect to our custom protocol
+              window.location.href = "abogo://auth-callback?token=${encodeURIComponent(
+                userToken
+              )}";
+              
+              // Set a timer to close the window automatically
+              let secondsLeft = 5;
+              const countdownElement = document.getElementById('countdown');
+              
+              const countdownInterval = setInterval(() => {
+                secondsLeft--;
+                countdownElement.textContent = "This window will close automatically in " + secondsLeft + " seconds...";
+                
+                if (secondsLeft <= 0) {
+                  clearInterval(countdownInterval);
+                  window.close();
+                }
+              }, 1000);
+            </script>
+          </body>
+        </html>
+      `);
+    }
+
+    // If not using the custom protocol, show the original success page
     res.send(`
-      <script>
-        window.opener.postMessage({ 
-          type: 'AUTH_SUCCESS',
-          jwt: '${userToken}',
-          user: ${JSON.stringify({ email, name, picture })}
-        }, '*');  // Use * to allow any origin temporarily for debugging
-        window.close();
-      </script>
+      <html>
+        <head>
+          <title>Authentication Successful</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+            .success { color: #4CAF50; }
+            .container { max-width: 600px; margin: 0 auto; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h1 class="success">Authentication Successful!</h1>
+            <p>You have successfully authenticated with Google.</p>
+            <p>Please return to the application to continue.</p>
+            
+            <script>
+              // Still try the postMessage approach if it was opened from within the app
+              try {
+                if (window.opener) {
+                  window.opener.postMessage({ 
+                    type: 'AUTH_SUCCESS',
+                    jwt: '${userToken}',
+                    user: ${JSON.stringify({ email, name, picture })}
+                  }, '*');
+                  window.close();
+                }
+              } catch (e) {
+                console.log('Could not communicate with opener window');
+              }
+              
+              // Store the token in localStorage for retrieval
+              localStorage.setItem('pendingAuth', JSON.stringify({
+                type: 'AUTH_SUCCESS',
+                jwt: '${userToken}',
+                user: ${JSON.stringify({ email, name, picture })}
+              }));
+            </script>
+          </div>
+        </body>
+      </html>
     `);
   } catch (error) {
     console.error("OAuth error:", error);
@@ -142,11 +325,30 @@ app.get("/auth/google/callback", async (req, res) => {
         window.opener.postMessage({ 
           type: 'AUTH_ERROR',
           error: 'Authentication failed'
-        }, '*');  // Use * to allow any origin temporarily for debugging
+        }, '*');
         window.close();
       </script>
     `);
   }
+});
+
+// Add this new endpoint before app.listen()
+app.get("/auth/local-bridge", (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Auth Bridge</title>
+      </head>
+      <body>
+        <script>
+          // This page helps bridge localStorage between browser and Electron
+          console.log("Auth bridge initialized");
+          // We don't need to do anything active - the parent window will read our localStorage
+        </script>
+      </body>
+    </html>
+  `);
 });
 
 app.listen(PORT, () => {
