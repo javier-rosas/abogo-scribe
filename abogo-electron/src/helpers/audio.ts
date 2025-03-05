@@ -270,14 +270,4 @@ export class AudioRecorder {
 // Create and export a singleton instance
 export const audioRecorder = new AudioRecorder();
 
-// Type declaration for Electron API
-declare global {
-  interface Window {
-    electron?: {
-      saveAudioFile: (options: {
-        buffer: ArrayBuffer;
-        filename: string;
-      }) => Promise<string>;
-    };
-  }
-}
+// No need for type declaration here as it's now in types/electron.d.ts

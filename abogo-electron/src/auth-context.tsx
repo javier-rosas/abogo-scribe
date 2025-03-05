@@ -12,12 +12,7 @@ declare global {
         };
       };
     };
-    electron?: {
-      openExternal: (url: string) => void;
-      onAuthToken: (callback: (token: string) => void) => void;
-      getAuthToken: () => Promise<string>;
-      clearAuthToken: () => Promise<boolean>;
-    };
+    // electron interface is now defined in types/electron.d.ts
   }
 }
 
