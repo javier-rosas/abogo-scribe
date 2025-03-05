@@ -56,11 +56,7 @@ export function AuthProvider({ children }: any) {
   }, [jwt]);
 
   useEffect(() => {
-    // Add message listener for OAuth popup
     const handleMessage = (event: MessageEvent) => {
-      console.log("Received message event:", event.origin, event.data);
-
-      // Accept messages from both development server and backend
       if (
         event.origin !== "http://localhost:5173" &&
         event.origin !== "http://localhost:3000"
@@ -73,7 +69,6 @@ export function AuthProvider({ children }: any) {
       }
 
       if (event.data.type === "AUTH_SUCCESS") {
-        console.log("Auth success - received JWT and user data");
         localStorage.setItem("jwt", event.data.jwt);
         setJwt(event.data.jwt);
         setAuthPending(false);
@@ -97,18 +92,11 @@ export function AuthProvider({ children }: any) {
 
   // Update the useEffect that listens for authentication
   useEffect(() => {
-    console.log(
-      "Setting up auth token listener - electron API available:",
-      !!window.electron?.onAuthToken
-    );
-
-    // Try to get token directly when component mounts
     if (window.electron?.getAuthToken) {
       window.electron
         .getAuthToken()
         .then((token) => {
           if (token) {
-            console.log("Retrieved stored auth token on mount");
             localStorage.setItem("jwt", token);
             setJwt(token);
           }
@@ -121,7 +109,6 @@ export function AuthProvider({ children }: any) {
     // Register for future token events
     if (window.electron?.onAuthToken) {
       window.electron.onAuthToken((token: string) => {
-        console.log("Received auth token from main process via IPC");
         localStorage.setItem("jwt", token);
         setJwt(token);
         setAuthPending(false);
@@ -130,7 +117,6 @@ export function AuthProvider({ children }: any) {
           authCheckInterval.current = null;
         }
       });
-      console.log("Auth token listener registered successfully");
     } else {
       console.error("Electron onAuthToken API not available");
     }
@@ -147,16 +133,11 @@ export function AuthProvider({ children }: any) {
 
   // Simplify checkAuthStatus to focus on getting the token
   async function checkAuthStatus() {
-    console.log("Checking auth status...");
-
-    // Try to get token directly from main process
     if (window.electron?.getAuthToken) {
       try {
-        console.log("Requesting auth token from main process");
         const token = await window.electron.getAuthToken();
 
         if (token) {
-          console.log("Retrieved auth token from main process");
           localStorage.setItem("jwt", token);
           setJwt(token);
           setAuthPending(false);
@@ -183,7 +164,6 @@ export function AuthProvider({ children }: any) {
       if (response.ok) {
         const data = await response.json();
         if (data.authenticated && data.jwt) {
-          console.log("Found authenticated session from backend");
           localStorage.setItem("jwt", data.jwt);
           setJwt(data.jwt);
           setAuthPending(false);
@@ -199,7 +179,6 @@ export function AuthProvider({ children }: any) {
   }
 
   async function handleGoogleSignIn() {
-    console.log("Initiating Google Sign In...");
     const GOOGLE_CLIENT_ID =
       "937215743557-d7j44tgj2hh0ilsfrugveg3bnpvvkchu.apps.googleusercontent.com";
     const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -219,17 +198,13 @@ export function AuthProvider({ children }: any) {
 
     // Set authPending to true and start checking for authentication
     setAuthPending(true);
-    console.log("Set authPending to true");
 
     // Start periodically checking for auth status
     if (authCheckInterval.current) {
-      console.log("Clearing existing auth check interval");
       window.clearInterval(authCheckInterval.current);
     }
 
-    console.log("Setting up new auth check interval");
     authCheckInterval.current = window.setInterval(() => {
-      console.log("Auth check interval triggered");
       checkAuthStatus();
     }, 2000); // Check every 2 seconds
 
@@ -239,37 +214,28 @@ export function AuthProvider({ children }: any) {
       `${GOOGLE_AUTH_URL}?${params.toString()}`
     );
     if (window.electron?.openExternal) {
-      const opened = await window.electron.openExternal(
+      await window.electron.openExternal(
         `${GOOGLE_AUTH_URL}?${params.toString()}`
       );
-      console.log("External browser opened:", opened);
     } else {
       console.error("Electron API not available for opening external browser");
     }
   }
 
   function logout() {
-    console.log("Logging out user");
-
-    // Clear token from localStorage
     localStorage.removeItem("jwt");
 
     // Clear token from Electron main process
     if (window.electron?.clearAuthToken) {
       window.electron
         .clearAuthToken()
-        .then(() => console.log("Auth token cleared from main process"))
         .catch((err) =>
           console.error("Error clearing auth token from main process:", err)
         );
     }
 
-    // Clear React state
     setJwt(null);
     setUser(null);
-
-    // Force reload to ensure clean state (optional)
-    // window.location.reload();
   }
 
   return (
