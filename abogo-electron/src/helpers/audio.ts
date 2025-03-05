@@ -1,4 +1,4 @@
-import { transcribeAudio } from "../api/transcribe";
+import { transcribeAudio } from '../api/transcribe';
 
 // Interface for recording options
 export interface RecordingOptions {
@@ -112,7 +112,10 @@ export class AudioRecorder {
             (this.checkAudioLevel() || immediateRecorder.state === "inactive")
           ) {
             try {
-              const transcription = await transcribeAudio(event.data);
+              const transcription = await transcribeAudio(
+                event.data,
+                (await window.electron?.getAuthToken()) || ""
+              );
               if (this._onTranscriptionUpdate) {
                 this._onTranscriptionUpdate(transcription);
               }
@@ -150,7 +153,10 @@ export class AudioRecorder {
             (this.checkAudioLevel() || recorder.state === "inactive")
           ) {
             try {
-              const transcription = await transcribeAudio(event.data);
+              const transcription = await transcribeAudio(
+                event.data,
+                (await window.electron?.getAuthToken()) || ""
+              );
               if (this._onTranscriptionUpdate) {
                 this._onTranscriptionUpdate(transcription);
               }

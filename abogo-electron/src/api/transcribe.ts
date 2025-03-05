@@ -1,4 +1,7 @@
-export async function transcribeAudio(audioBlob: Blob): Promise<string> {
+export async function transcribeAudio(
+  audioBlob: Blob,
+  jwt: string
+): Promise<string> {
   console.log("Transcribing audio...");
 
   try {
@@ -6,6 +9,7 @@ export async function transcribeAudio(audioBlob: Blob): Promise<string> {
       method: "POST",
       headers: {
         "Content-Type": "audio/webm",
+        Authorization: `Bearer ${jwt}`,
       },
       body: audioBlob,
     });
