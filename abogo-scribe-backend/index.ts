@@ -15,7 +15,7 @@ import {
 import { authenticateJWT } from './auth/middleware';
 import { meetingRouter } from './meetings/meetingsApi';
 // Import user router
-import { userRouter } from './users/users';
+import { userRouter } from './users/usersApi';
 
 // Environment Variables
 const PORT = process.env.PORT || 3000;

@@ -2,7 +2,7 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 
 // Import userDao after the authenticateJWT export
-import { userDao } from '../users/users';
+import { userDao } from '../users/usersApi';
 
 import type { RequestHandler } from "express";
 
