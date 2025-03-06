@@ -13,7 +13,7 @@ import {
     protectedRouteExample
 } from './auth/auth';
 import { authenticateJWT } from './auth/middleware';
-import { meetingRouter } from './meetings/meetings';
+import { meetingRouter } from './meetings/meetingsApi';
 // Import user router
 import { userRouter } from './users/users';
 
