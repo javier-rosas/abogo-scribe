@@ -8,6 +8,8 @@ interface Meeting {
   startTime: string;
   duration: number;
   owner: string;
+  transcription?: string; // Optional transcription field
+  notes?: string; // Optional notes field
   createdAt: string;
   updatedAt: string;
 }
@@ -17,6 +19,8 @@ interface MeetingInput {
   date: string;
   startTime: string;
   duration: number;
+  transcription?: string; // Optional transcription field
+  notes?: string; // Optional notes field
 }
 
 interface PaginatedMeetings {

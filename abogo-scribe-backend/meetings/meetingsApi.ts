@@ -14,6 +14,8 @@ export interface IMeeting extends Document {
   startTime: string;
   duration: number;
   owner: mongoose.Types.ObjectId; // Reference to the User who owns this meeting
+  transcription?: string; // Optional transcription field
+  notes?: string; // Optional notes field
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +56,14 @@ const MeetingSchema = new Schema<IMeeting>(
       ref: "User",
       required: true,
       index: true, // Add index for faster queries
+    },
+    transcription: {
+      type: String,
+      required: false,
+    },
+    notes: {
+      type: String,
+      required: false,
     },
   },
   {
