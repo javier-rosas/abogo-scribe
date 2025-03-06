@@ -77,15 +77,6 @@ export const meetingDao = {
     }
   },
 
-  // Find meeting by ID
-  findById: async (id: string): Promise<IMeeting | null> => {
-    try {
-      return await Meeting.findById(id).populate("owner", "name email");
-    } catch (error) {
-      throw error;
-    }
-  },
-
   // Find meetings by owner
   findByOwner: async (
     ownerId: mongoose.Types.ObjectId,
@@ -116,44 +107,34 @@ export const meetingDao = {
     }
   },
 
-  // Get all meetings (with optional pagination)
-  findAll: async (
-    limit: number = 10,
-    page: number = 1
-  ): Promise<{
-    meetings: IMeeting[];
-    total: number;
-    page: number;
-    pages: number;
-  }> => {
+  // Find meetings by date range for a specific owner
+  findByDateRange: async (
+    startDate: string,
+    endDate: string,
+    ownerId: mongoose.Types.ObjectId
+  ): Promise<IMeeting[]> => {
     try {
-      const skip = (page - 1) * limit;
-      const total = await Meeting.countDocuments();
-      const meetings = await Meeting.find()
-        .skip(skip)
-        .limit(limit)
+      return await Meeting.find({
+        owner: ownerId,
+        date: { $gte: startDate, $lte: endDate },
+      })
         .sort({ date: 1, startTime: 1 })
         .populate("owner", "name email");
-
-      return {
-        meetings,
-        total,
-        page,
-        pages: Math.ceil(total / limit),
-      };
     } catch (error) {
       throw error;
     }
   },
 
-  // Update a meeting
-  update: async (
-    id: string,
+  // Update meetings by owner and date
+  updateByOwnerAndDate: async (
+    ownerId: mongoose.Types.ObjectId,
+    date: string,
+    startTime: string,
     meetingData: Partial<IMeeting>
   ): Promise<IMeeting | null> => {
     try {
-      return await Meeting.findByIdAndUpdate(
-        id,
+      return await Meeting.findOneAndUpdate(
+        { owner: ownerId, date: date, startTime: startTime },
         { $set: meetingData },
         { new: true, runValidators: true }
       ).populate("owner", "name email");
@@ -162,33 +143,18 @@ export const meetingDao = {
     }
   },
 
-  // Delete a meeting
-  delete: async (id: string): Promise<IMeeting | null> => {
+  // Delete meeting by owner and date
+  deleteByOwnerAndDate: async (
+    ownerId: mongoose.Types.ObjectId,
+    date: string,
+    startTime: string
+  ): Promise<IMeeting | null> => {
     try {
-      return await Meeting.findByIdAndDelete(id);
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  // Find meetings by date range
-  findByDateRange: async (
-    startDate: string,
-    endDate: string,
-    ownerId?: mongoose.Types.ObjectId
-  ): Promise<IMeeting[]> => {
-    try {
-      const query: any = {
-        date: { $gte: startDate, $lte: endDate },
-      };
-
-      if (ownerId) {
-        query.owner = ownerId;
-      }
-
-      return await Meeting.find(query)
-        .sort({ date: 1, startTime: 1 })
-        .populate("owner", "name email");
+      return await Meeting.findOneAndDelete({
+        owner: ownerId,
+        date: date,
+        startTime: startTime,
+      });
     } catch (error) {
       throw error;
     }
@@ -226,41 +192,6 @@ export const meetingController = {
     }
   },
 
-  // Get a meeting by ID
-  getMeetingById: async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-
-      if (!req.user?._id) {
-        res.status(401).json({ error: "Authentication required" });
-        return;
-      }
-
-      const meeting = await meetingDao.findById(id);
-
-      if (!meeting) {
-        res.status(404).json({ error: "Meeting not found" });
-        return;
-      }
-
-      // Check if the user is the owner of the meeting
-      if (meeting.owner.toString() !== req.user._id.toString()) {
-        res
-          .status(403)
-          .json({ error: "Not authorized to access this meeting" });
-        return;
-      }
-
-      res.status(200).json(meeting);
-    } catch (error) {
-      console.error("Error fetching meeting:", error);
-      res.status(500).json({ error: "Failed to fetch meeting" });
-    }
-  },
-
   // Get all meetings for the authenticated user
   getUserMeetings: async (
     req: AuthenticatedRequest,
@@ -285,100 +216,7 @@ export const meetingController = {
     }
   },
 
-  // Get all meetings (admin only)
-  getAllMeetings: async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> => {
-    try {
-      // This endpoint could be restricted to admin users
-      const limit = parseInt(req.query.limit as string) || 10;
-      const page = parseInt(req.query.page as string) || 1;
-
-      const result = await meetingDao.findAll(limit, page);
-      res.status(200).json(result);
-    } catch (error) {
-      console.error("Error fetching meetings:", error);
-      res.status(500).json({ error: "Failed to fetch meetings" });
-    }
-  },
-
-  // Update a meeting
-  updateMeeting: async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-      const meetingData = req.body;
-
-      if (!req.user?._id) {
-        res.status(401).json({ error: "Authentication required" });
-        return;
-      }
-
-      // Check if meeting exists and user is the owner
-      const existingMeeting = await meetingDao.findById(id);
-      if (!existingMeeting) {
-        res.status(404).json({ error: "Meeting not found" });
-        return;
-      }
-
-      if (existingMeeting.owner.toString() !== req.user._id.toString()) {
-        res
-          .status(403)
-          .json({ error: "Not authorized to update this meeting" });
-        return;
-      }
-
-      const updatedMeeting = await meetingDao.update(id, meetingData);
-      res.status(200).json(updatedMeeting);
-    } catch (error: any) {
-      if (error.name === "ValidationError") {
-        res.status(400).json({ error: error.message });
-      } else {
-        console.error("Error updating meeting:", error);
-        res.status(500).json({ error: "Failed to update meeting" });
-      }
-    }
-  },
-
-  // Delete a meeting
-  deleteMeeting: async (
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-
-      if (!req.user?._id) {
-        res.status(401).json({ error: "Authentication required" });
-        return;
-      }
-
-      // Check if meeting exists and user is the owner
-      const existingMeeting = await meetingDao.findById(id);
-      if (!existingMeeting) {
-        res.status(404).json({ error: "Meeting not found" });
-        return;
-      }
-
-      if (existingMeeting.owner.toString() !== req.user._id.toString()) {
-        res
-          .status(403)
-          .json({ error: "Not authorized to delete this meeting" });
-        return;
-      }
-
-      await meetingDao.delete(id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting meeting:", error);
-      res.status(500).json({ error: "Failed to delete meeting" });
-    }
-  },
-
-  // Get meetings by date range
+  // Get meetings by date range for authenticated user
   getMeetingsByDateRange: async (
     req: AuthenticatedRequest,
     res: Response
@@ -409,6 +247,84 @@ export const meetingController = {
       res.status(500).json({ error: "Failed to fetch meetings" });
     }
   },
+
+  // Update meeting by date and time
+  updateMeetingByDate: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { date, startTime } = req.query;
+      const meetingData = req.body;
+
+      if (!date || !startTime) {
+        res.status(400).json({ error: "Date and start time are required" });
+        return;
+      }
+
+      if (!req.user?._id) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+
+      const updatedMeeting = await meetingDao.updateByOwnerAndDate(
+        req.user._id,
+        date as string,
+        startTime as string,
+        meetingData
+      );
+
+      if (!updatedMeeting) {
+        res.status(404).json({ error: "Meeting not found" });
+        return;
+      }
+
+      res.status(200).json(updatedMeeting);
+    } catch (error: any) {
+      if (error.name === "ValidationError") {
+        res.status(400).json({ error: error.message });
+      } else {
+        console.error("Error updating meeting:", error);
+        res.status(500).json({ error: "Failed to update meeting" });
+      }
+    }
+  },
+
+  // Delete meeting by date and time
+  deleteMeetingByDate: async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { date, startTime } = req.query;
+
+      if (!date || !startTime) {
+        res.status(400).json({ error: "Date and start time are required" });
+        return;
+      }
+
+      if (!req.user?._id) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+
+      const deletedMeeting = await meetingDao.deleteByOwnerAndDate(
+        req.user._id,
+        date as string,
+        startTime as string
+      );
+
+      if (!deletedMeeting) {
+        res.status(404).json({ error: "Meeting not found" });
+        return;
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting meeting:", error);
+      res.status(500).json({ error: "Failed to delete meeting" });
+    }
+  },
 };
 
 // ==================== Meeting Routes ====================
@@ -429,20 +345,17 @@ meetingRouter.post("/", asHandler(meetingController.createMeeting));
 // GET /meetings - Get all meetings for the authenticated user
 meetingRouter.get("/", asHandler(meetingController.getUserMeetings));
 
-// GET /meetings/all - Get all meetings (admin only)
-meetingRouter.get("/all", asHandler(meetingController.getAllMeetings));
-
 // GET /meetings/date-range - Get meetings by date range
 meetingRouter.get(
   "/date-range",
   asHandler(meetingController.getMeetingsByDateRange)
 );
 
-// GET /meetings/:id - Get a meeting by ID
-meetingRouter.get("/:id", asHandler(meetingController.getMeetingById));
+// PUT /meetings/by-date - Update a meeting by date and time
+meetingRouter.put("/by-date", asHandler(meetingController.updateMeetingByDate));
 
-// PUT /meetings/:id - Update a meeting
-meetingRouter.put("/:id", asHandler(meetingController.updateMeeting));
-
-// DELETE /meetings/:id - Delete a meeting
-meetingRouter.delete("/:id", asHandler(meetingController.deleteMeeting));
+// DELETE /meetings/by-date - Delete a meeting by date and time
+meetingRouter.delete(
+  "/by-date",
+  asHandler(meetingController.deleteMeetingByDate)
+);
