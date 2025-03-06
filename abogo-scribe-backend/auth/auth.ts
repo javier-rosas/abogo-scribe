@@ -1,5 +1,8 @@
-import axios from "axios";
-import jwt from "jsonwebtoken";
+import axios from 'axios';
+import jwt from 'jsonwebtoken';
+
+// Import userDao after the authenticateJWT export
+import { userDao } from '../users/users';
 
 import type { RequestHandler } from "express";
 
@@ -17,25 +20,6 @@ if (!GOOGLE_CLIENT_ID) {
   throw new Error("GOOGLE_CLIENT_ID is not defined");
 }
 
-// Middleware to Protect Routes
-export const authenticateJWT: RequestHandler = (req, res, next) => {
-  const token = req.header("Authorization")?.split(" ")[1];
-
-  if (!token) {
-    res.status(403).json({ error: "No token provided" });
-    return;
-  }
-
-  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-    if (err) {
-      res.status(403).json({ error: "Invalid token" });
-      return;
-    }
-    (req as any).user = user;
-    next();
-  });
-};
-
 // Google Authentication Handler
 export const handleGoogleAuth: RequestHandler = async (req, res) => {
   const { token } = req.body;
@@ -48,6 +32,14 @@ export const handleGoogleAuth: RequestHandler = async (req, res) => {
 
     const { email, name, picture, sub } = googleResponse.data;
 
+    // Upsert user in database
+    const user = await userDao.upsert({
+      email,
+      name,
+      picture,
+      googleId: sub,
+    });
+
     // Generate our own JWT
     const userToken = jwt.sign(
       { email, name, picture, googleId: sub },
@@ -55,8 +47,9 @@ export const handleGoogleAuth: RequestHandler = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.json({ jwt: userToken, user: { email, name, picture } });
+    res.json({ jwt: userToken, user });
   } catch (error) {
+    console.error("Google auth error:", error);
     res.status(401).json({ error: "Invalid Google token" });
   }
 };
@@ -88,6 +81,14 @@ export const handleGoogleAuthCallback: RequestHandler = async (req, res) => {
 
     const { email, name, picture, sub } = userInfo.data;
 
+    // Upsert user in database
+    const user = await userDao.upsert({
+      email,
+      name,
+      picture,
+      googleId: sub,
+    });
+
     // Generate our JWT
     const userToken = jwt.sign(
       { email, name, picture, googleId: sub },
@@ -101,7 +102,7 @@ export const handleGoogleAuthCallback: RequestHandler = async (req, res) => {
       JSON.stringify({
         type: "AUTH_SUCCESS",
         jwt: userToken,
-        user: { email, name, picture },
+        user,
       }),
       {
         httpOnly: false,
@@ -234,7 +235,7 @@ export const handleGoogleAuthCallback: RequestHandler = async (req, res) => {
                   window.opener.postMessage({ 
                     type: 'AUTH_SUCCESS',
                     jwt: '${userToken}',
-                    user: ${JSON.stringify({ email, name, picture })}
+                    user: ${JSON.stringify(user)}
                   }, '*');
                   window.close();
                 }
@@ -246,7 +247,7 @@ export const handleGoogleAuthCallback: RequestHandler = async (req, res) => {
               localStorage.setItem('pendingAuth', JSON.stringify({
                 type: 'AUTH_SUCCESS',
                 jwt: '${userToken}',
-                user: ${JSON.stringify({ email, name, picture })}
+                user: ${JSON.stringify(user)}
               }));
             </script>
           </div>
