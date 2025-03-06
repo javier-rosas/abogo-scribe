@@ -18,7 +18,7 @@ interface MeetingInput {
   title: string;
   date: string;
   startTime: string;
-  duration: number;
+  duration?: number; // Changed to optional
   transcription?: string; // Optional transcription field
   notes?: string; // Optional notes field
 }
@@ -122,30 +122,25 @@ export const getMeetingsByDateRange = async (
 };
 
 /**
- * Update a meeting by date and time
+ * Update a meeting by ID
  * @param token JWT token for authentication
- * @param date Date of the meeting (YYYY-MM-DD)
- * @param startTime Start time of the meeting (HH:mm)
+ * @param meetingId Meeting ID
  * @param meetingData Updated meeting data
  * @returns Promise<Meeting>
  */
-export const updateMeetingByDate = async (
+export const updateMeeting = async (
   token: string,
-  date: string,
-  startTime: string,
+  meetingId: string,
   meetingData: Partial<MeetingInput>
 ): Promise<Meeting> => {
-  const response = await fetch(
-    `${VITE_API_URL}/meetings/by-date?date=${date}&startTime=${startTime}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(meetingData),
-    }
-  );
+  const response = await fetch(`${VITE_API_URL}/meetings/${meetingId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(meetingData),
+  });
 
   if (!response.ok) {
     const error = await response.json();
@@ -156,27 +151,22 @@ export const updateMeetingByDate = async (
 };
 
 /**
- * Delete a meeting by date and time
+ * Delete a meeting by ID
  * @param token JWT token for authentication
- * @param date Date of the meeting (YYYY-MM-DD)
- * @param startTime Start time of the meeting (HH:mm)
+ * @param meetingId Meeting ID
  * @returns Promise<void>
  */
-export const deleteMeetingByDate = async (
+export const deleteMeeting = async (
   token: string,
-  date: string,
-  startTime: string
+  meetingId: string
 ): Promise<void> => {
-  const response = await fetch(
-    `${VITE_API_URL}/meetings/by-date?date=${date}&startTime=${startTime}`,
-    {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await fetch(`${VITE_API_URL}/meetings/${meetingId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
 
   if (!response.ok) {
     const error = await response.json();

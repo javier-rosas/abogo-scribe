@@ -2,6 +2,8 @@ import { CheckSquare, ChevronLeft, Mic, Save, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { createMeeting } from '@/api/meetings';
+import { useAuth } from '@/auth-context';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/ui/logout-button';
 import { audioRecorder } from '@/helpers/audio';
@@ -22,6 +24,8 @@ export default function Editor({
   meeting?: Meeting;
   onBack: () => void;
 }) {
+  const { jwt } = useAuth();
+
   const [blocks, setBlocks] = useState([
     { id: "title", type: "title", content: "Untitled" },
     { id: "block-1", type: "paragraph", content: "" },
@@ -201,6 +205,28 @@ export default function Editor({
       if (isRecording) {
         audioRecorder.stopRecording();
       } else {
+        // Create meeting before starting recording
+        const title =
+          blocks.find((block) => block.id === "title")?.content || "Untitled";
+        const now = new Date();
+        const meetingData = {
+          title,
+          date: now.toISOString().split("T")[0], // YYYY-MM-DD format
+          startTime: now.toTimeString().split(" ")[0].slice(0, 5), // HH:mm format
+        };
+
+        try {
+          if (!jwt) {
+            throw new Error("No JWT token found");
+          }
+          const newMeeting = await createMeeting(jwt, meetingData);
+          console.log("Meeting created:", newMeeting);
+        } catch (error) {
+          console.error("Failed to create meeting:", error);
+          toast.error("Failed to create meeting");
+          return;
+        }
+
         await audioRecorder.startRecording();
       }
     } catch (error) {

@@ -12,7 +12,7 @@ export interface IMeeting extends Document {
   title: string;
   date: string;
   startTime: string;
-  duration: number;
+  duration?: number; // Changed to optional
   owner: mongoose.Types.ObjectId; // Reference to the User who owns this meeting
   transcription?: string; // Optional transcription field
   notes?: string; // Optional notes field
@@ -48,7 +48,7 @@ const MeetingSchema = new Schema<IMeeting>(
     },
     duration: {
       type: Number,
-      required: true,
+      required: false,
       min: 1, // Minimum duration in minutes
     },
     owner: {
@@ -169,6 +169,38 @@ export const meetingDao = {
       throw error;
     }
   },
+
+  // Update meeting by ID
+  updateById: async (
+    ownerId: mongoose.Types.ObjectId,
+    meetingId: string,
+    meetingData: Partial<IMeeting>
+  ): Promise<IMeeting | null> => {
+    try {
+      return await Meeting.findOneAndUpdate(
+        { _id: meetingId, owner: ownerId },
+        { $set: meetingData },
+        { new: true, runValidators: true }
+      ).populate("owner", "name email");
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Delete meeting by ID
+  deleteById: async (
+    ownerId: mongoose.Types.ObjectId,
+    meetingId: string
+  ): Promise<IMeeting | null> => {
+    try {
+      return await Meeting.findOneAndDelete({
+        _id: meetingId,
+        owner: ownerId,
+      });
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 // ==================== Meeting Controller ====================
@@ -258,29 +290,23 @@ export const meetingController = {
     }
   },
 
-  // Update meeting by date and time
-  updateMeetingByDate: async (
+  // Update meeting by ID
+  updateMeeting: async (
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> => {
     try {
-      const { date, startTime } = req.query;
+      const { id } = req.params;
       const meetingData = req.body;
-
-      if (!date || !startTime) {
-        res.status(400).json({ error: "Date and start time are required" });
-        return;
-      }
 
       if (!req.user?._id) {
         res.status(401).json({ error: "Authentication required" });
         return;
       }
 
-      const updatedMeeting = await meetingDao.updateByOwnerAndDate(
+      const updatedMeeting = await meetingDao.updateById(
         req.user._id,
-        date as string,
-        startTime as string,
+        id,
         meetingData
       );
 
@@ -300,29 +326,20 @@ export const meetingController = {
     }
   },
 
-  // Delete meeting by date and time
-  deleteMeetingByDate: async (
+  // Delete meeting by ID
+  deleteMeeting: async (
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> => {
     try {
-      const { date, startTime } = req.query;
-
-      if (!date || !startTime) {
-        res.status(400).json({ error: "Date and start time are required" });
-        return;
-      }
+      const { id } = req.params;
 
       if (!req.user?._id) {
         res.status(401).json({ error: "Authentication required" });
         return;
       }
 
-      const deletedMeeting = await meetingDao.deleteByOwnerAndDate(
-        req.user._id,
-        date as string,
-        startTime as string
-      );
+      const deletedMeeting = await meetingDao.deleteById(req.user._id, id);
 
       if (!deletedMeeting) {
         res.status(404).json({ error: "Meeting not found" });
@@ -361,11 +378,8 @@ meetingRouter.get(
   asHandler(meetingController.getMeetingsByDateRange)
 );
 
-// PUT /meetings/by-date - Update a meeting by date and time
-meetingRouter.put("/by-date", asHandler(meetingController.updateMeetingByDate));
+// PUT /meetings/:id - Update a meeting by ID
+meetingRouter.put("/:id", asHandler(meetingController.updateMeeting));
 
-// DELETE /meetings/by-date - Delete a meeting by date and time
-meetingRouter.delete(
-  "/by-date",
-  asHandler(meetingController.deleteMeetingByDate)
-);
+// DELETE /meetings/:id - Delete a meeting by ID
+meetingRouter.delete("/:id", asHandler(meetingController.deleteMeeting));
