@@ -8,7 +8,7 @@ import { audioRecorder } from '@/helpers/audio';
 import { cn } from '@/lib/utils';
 import { Meeting } from '@/types';
 
-import Conversation from '../conversation';
+import Conversation from './conversation';
 
 interface TranscriptionEntry {
   text: string;
