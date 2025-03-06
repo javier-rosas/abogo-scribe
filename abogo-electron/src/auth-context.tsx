@@ -17,6 +17,7 @@ declare global {
 }
 
 interface User extends JwtPayload {
+  _id?: string;
   email?: string;
   name?: string;
 }

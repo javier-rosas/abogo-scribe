@@ -40,9 +40,15 @@ export const handleGoogleAuth: RequestHandler = async (req, res) => {
       googleId: sub,
     });
 
-    // Generate our own JWT
+    // Generate our own JWT - add _id to the payload
     const userToken = jwt.sign(
-      { email, name, picture, googleId: sub },
+      {
+        _id: user._id, // Add the MongoDB _id
+        email,
+        name,
+        picture,
+        googleId: sub,
+      },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -89,9 +95,15 @@ export const handleGoogleAuthCallback: RequestHandler = async (req, res) => {
       googleId: sub,
     });
 
-    // Generate our JWT
+    // Generate our JWT - add _id to the payload
     const userToken = jwt.sign(
-      { email, name, picture, googleId: sub },
+      {
+        _id: user._id, // Add the MongoDB _id
+        email,
+        name,
+        picture,
+        googleId: sub,
+      },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
