@@ -18,13 +18,16 @@ interface TranscriptionEntry {
 }
 
 export default function Editor({
-  meeting,
+  meeting: initialMeeting,
   onBack,
 }: {
   meeting?: Meeting;
   onBack: () => void;
 }) {
   const { jwt } = useAuth();
+  const [currentMeeting, setCurrentMeeting] = useState<Meeting | undefined>(
+    initialMeeting
+  );
 
   const [blocks, setBlocks] = useState([
     { id: "title", type: "title", content: "Untitled" },
@@ -220,7 +223,12 @@ export default function Editor({
             throw new Error("No JWT token found");
           }
           const newMeeting = await createMeeting(jwt, meetingData);
-          console.log("Meeting created:", newMeeting);
+          setCurrentMeeting({
+            ...newMeeting,
+            id: newMeeting._id,
+            participants: [],
+            color: "bg-blue-100 text-blue-900",
+          });
         } catch (error) {
           console.error("Failed to create meeting:", error);
           toast.error("Failed to create meeting");
@@ -288,7 +296,7 @@ export default function Editor({
 
     const content = block.content || "";
 
-    console.log(meeting);
+    console.log("meeting", currentMeeting);
 
     switch (block.type) {
       case "title":
