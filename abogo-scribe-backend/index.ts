@@ -1,23 +1,21 @@
-import cookieParser from "cookie-parser";
-import cors from "cors";
-import express from "express";
-import mongoose from "mongoose";
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import express from 'express';
+import mongoose from 'mongoose';
 
 // import { transcribeAudioOpenAI } from './api/openAI';
 // import { transcribeAudioElevenLabs } from './api/elevenLabs';
 // import { transcribeAudioGroq } from './api/groq';
-import { transcribeAudioDeepgram } from "./api/deepgram";
+import { transcribeAudioDeepgram } from './api/deepgram';
 // Import auth functions
 import {
-  checkAuthStatus,
-  getLocalAuthBridge,
-  handleGoogleAuth,
-  handleGoogleAuthCallback,
-  protectedRouteExample,
-} from "./auth/auth";
-import { authenticateJWT } from "./auth/middleware";
+    checkAuthStatus, getLocalAuthBridge, handleGoogleAuth, handleGoogleAuthCallback,
+    protectedRouteExample
+} from './auth/auth';
+import { authenticateJWT } from './auth/middleware';
+import { meetingRouter } from './meetings/meetings';
 // Import user router
-import { userRouter } from "./users/users";
+import { userRouter } from './users/users';
 
 // Environment Variables
 const PORT = process.env.PORT || 3000;
@@ -73,6 +71,9 @@ app.get("/auth/local-bridge", getLocalAuthBridge);
 
 // User Routes
 app.use("/users", userRouter);
+
+// Meeting Routes
+app.use("/meetings", meetingRouter);
 
 // Protected Route Example
 app.get("/protected", authenticateJWT, protectedRouteExample);
