@@ -19,7 +19,7 @@ export default function Editor({
   meeting,
   onBack,
 }: {
-  meeting: Meeting;
+  meeting?: Meeting;
   onBack: () => void;
 }) {
   const [blocks, setBlocks] = useState([

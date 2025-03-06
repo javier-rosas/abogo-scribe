@@ -10,6 +10,7 @@ import { Meeting } from './types';
 
 function App() {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [isCreatingNewNote, setIsCreatingNewNote] = useState(false);
 
   const { user } = useAuth();
 
@@ -17,17 +18,27 @@ function App() {
     return <LoginPage />;
   }
 
-  console.log("User:", user);
+  console.log("user", user);
+
+  const handleMeetingSelect = (meeting: Meeting | null) => {
+    if (meeting === null) {
+      setIsCreatingNewNote(true);
+    } else {
+      setSelectedMeeting(meeting);
+    }
+  };
+
+  const handleBack = () => {
+    setSelectedMeeting(null);
+    setIsCreatingNewNote(false);
+  };
 
   return (
     <div className="h-screen w-screen overflow-hidden">
-      {selectedMeeting ? (
-        <Editor
-          meeting={selectedMeeting}
-          onBack={() => setSelectedMeeting(null)}
-        />
+      {selectedMeeting || isCreatingNewNote ? (
+        <Editor meeting={selectedMeeting || undefined} onBack={handleBack} />
       ) : (
-        <Dashboard onMeetingSelect={setSelectedMeeting} />
+        <Dashboard onMeetingSelect={handleMeetingSelect} />
       )}
     </div>
   );
