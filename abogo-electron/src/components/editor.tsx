@@ -2,7 +2,7 @@ import { CheckSquare, ChevronLeft, Mic, Save, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-import { createMeeting } from '@/api/meetings';
+import { createMeeting, updateMeeting } from '@/api/meetings';
 import { useAuth } from '@/auth-context';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/ui/logout-button';
@@ -17,6 +17,17 @@ interface TranscriptionEntry {
   timestamp: number;
 }
 
+// Function to get meeting data from localStorage
+const getMeetingFromStorage = (meetingId: string): Meeting | null => {
+  const data = localStorage.getItem(`meeting-${meetingId}`);
+  return data ? JSON.parse(data) : null;
+};
+
+// Function to save meeting data to localStorage
+const saveMeetingToStorage = (meeting: Meeting) => {
+  localStorage.setItem(`meeting-${meeting.id}`, JSON.stringify(meeting));
+};
+
 export default function Editor({
   meeting: initialMeeting,
   onBack,
@@ -26,7 +37,11 @@ export default function Editor({
 }) {
   const { jwt } = useAuth();
   const [currentMeeting, setCurrentMeeting] = useState<Meeting | undefined>(
-    initialMeeting
+    () => {
+      if (!initialMeeting) return undefined;
+      // Try to get meeting from localStorage first
+      return getMeetingFromStorage(initialMeeting.id) || initialMeeting;
+    }
   );
 
   const [blocks, setBlocks] = useState([
@@ -114,6 +129,21 @@ export default function Editor({
     setBlocks(
       blocks.map((block) => (block.id === id ? { ...block, content } : block))
     );
+
+    // Save to localStorage if we have a current meeting
+    if (currentMeeting) {
+      const updatedMeeting = {
+        ...currentMeeting,
+        title:
+          id === "title"
+            ? content
+            : blocks.find((block) => block.id === "title")?.content ||
+              "Untitled",
+        notes: blocks.map((block) => block.content).join("\n"),
+      };
+      setCurrentMeeting(updatedMeeting);
+      saveMeetingToStorage(updatedMeeting);
+    }
   };
 
   // Handles keyboard events for block manipulation (delete, enter, backspace)
@@ -364,10 +394,38 @@ export default function Editor({
     }
   };
 
+  // Handle back button click - save to MongoDB before going back
+  const handleBack = async () => {
+    if (currentMeeting && jwt) {
+      try {
+        const meetingData = {
+          title:
+            blocks.find((block) => block.id === "title")?.content || "Untitled",
+          notes: blocks.map((block) => block.content).join("\n"),
+          transcription: transcriptionHistory
+            .map((entry) => entry.text)
+            .join("\n"),
+        };
+
+        await updateMeeting(jwt, currentMeeting.id, meetingData);
+        // Clear the localStorage entry for this meeting
+        localStorage.removeItem(`meeting-${currentMeeting.id}`);
+        onBack();
+      } catch (error) {
+        console.error("Failed to save meeting:", error);
+        toast.error("Failed to save meeting", {
+          description: "Your changes will be preserved locally.",
+        });
+      }
+    } else {
+      onBack();
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b shrink-0">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
